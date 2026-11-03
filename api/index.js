@@ -33,11 +33,11 @@ const SITE_NAME = "ObsessionHub";             // shown at the top of every page
 // For Linkvertise: create the link with that target, then turn ON "Anti-Bypass" in the
 // Linkvertise dashboard for each link (that is Linkvertise's own server-side protection).
 const CHECKPOINTS = [
-  "https://direct-link.net/10011031/B72fEGbf5kYG",   // Checkpoint 1  -> target /checkpoint/1
-  "https://link-hub.net/10011031/Cmbzeav4ae57",   // Checkpoint 2  -> target /checkpoint/2
-  "https://direct-link.net/10011031/hyRI1in6PVqp",   // Checkpoint 3  -> target /checkpoint/3
-  "https://direct-link.net/10011031/5hrHrbmgQA3Y",   // Checkpoint 4  -> target /checkpoint/4
-  "https://link-hub.net/10011031/ur61jQ6nbTzR",   // Checkpoint 5  -> target /checkpoint/5
+  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-1",   // Checkpoint 1  -> target /checkpoint/1
+  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-2",   // Checkpoint 2  -> target /checkpoint/2
+  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-3",   // Checkpoint 3  -> target /checkpoint/3
+  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-4",   // Checkpoint 4  -> target /checkpoint/4
+  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-5",   // Checkpoint 5  -> target /checkpoint/5
 ];
 const MIN_SECONDS_PER_CHECKPOINT = 10;        // finishing faster than this = bypass
 const REQUIRE_REFERER = true;                 // require coming back from an allowed ad site (below)
@@ -69,12 +69,15 @@ const ADMIN_SECRET = process.env.ADMIN_SECRET || "";
 // ===== HOME PAGE CONTENT (edit these) =====
 const TAGLINE = "Get your key, pick your script, and start playing. Keys last 5 hours.";
 const LOGO_URL = "";     // optional: link to your own logo image (https://...)
-const DISCORD_URL = "https://discord.gg/QUkGjgdbp";        // your Discord invite ("" to hide)
-const YOUTUBE_URL = "https://www.youtube.com/@jirombv";      // your YouTube channel ("" to hide)
+// Optional: show ONE image on the Games page instead of the game tiles.
+// Paste a link to your own hosted image (upload it, copy the direct link). "" = show the normal tiles.
+const GAMES_BANNER = "";
+const DISCORD_URL = "https://discord.gg/YOUR-INVITE";        // your Discord invite ("" to hide)
+const YOUTUBE_URL = "https://youtube.com/@YOUR-CHANNEL";      // your YouTube channel ("" to hide)
 
 // Add your supported games here. status: "Supported", "Updating" or "Unsupported"
 const GAMES = [
-   { name: "Universal", status: "Supported", description: "List of Supported", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/suppoted.png", link: "https://www.roblox.com" },
+  // { name: "Game Name", status: "Supported", description: "Short note", image: "https://... (thumbnail)", link: "https://www.roblox.com/games/..." },
 ];
 
 // Add your scripts here. status: "Working", "Updating" or "Patched"
@@ -85,10 +88,10 @@ const SCRIPTS = [
 // Add your executors here. status: "Working", "Updating" or "Down"
 // platform decides the section: "Android"/"iOS"/"Mobile" -> Mobile Executors, anything else -> PC Executors
 const EXECUTORS = [
-  { name: "Madium", platform: "Windows", price: "Free", status: "Working", description: "The #1 powerful scripting utility on the market.", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/madium.png", link: "https://getmadium.net/" },
-  { name: "Real", platform: "Windows", price: "Free", status: "Working", description: "Official Real Executor website. Download the free Roblox Lua executor for Windows, run scripts fast, use ScriptHub, and join the verified Project Real community..", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/real.png", link: "https://projectreal.gg/" },
-  { name: "Delta", platform: "Android, iOS", price: "Free", status: "Working", description: "Delta Executor is the greatest, safest, and most popular Roblox Executor. Download the official Delta Executor.", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/delta.jpg", link: "https://deltaexploits.gg/delta-executor" },
-  { name: "Arceus Neo", platform: "Android, iOS", price: "Free", status: "Working", description: "Powerful Roblox executor with advanced features, fast updates, and a clean UI.", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/arceus.png", link: "https://spdmteam.com/index" },
+  { name: "Swift", platform: "Windows", price: "Free", status: "Working", description: "Fast and stable PC executor. Low detection, supports most scripts.", image: "https://picsum.photos/seed/swift/400/200", link: "https://your-download-link.com/swift" },
+  { name: "Wave", platform: "Windows", price: "Paid", status: "Working", description: "Premium Windows executor with fast updates and strong script support.", image: "https://picsum.photos/seed/wave/400/200", link: "https://your-download-link.com/wave" },
+  { name: "Delta", platform: "Android", price: "Free", status: "Working", description: "Popular free mobile executor for Android. Easy setup.", image: "https://picsum.photos/seed/delta/400/200", link: "https://your-download-link.com/delta" },
+  { name: "Codex", platform: "iOS", price: "Free", status: "Working", description: "Free iOS executor for iPhone and iPad. No jailbreak needed.", image: "https://picsum.photos/seed/codex/400/200", link: "https://your-download-link.com/codex" },
 ];
 
 // FAQ on the home page: [question, answer]
@@ -966,6 +969,17 @@ const isMobileExec = e => /android|ios|iphone|ipad|mobile|phone|arm/i.test(((e.p
 
 function listPage(kind) {
   const L = LISTS[kind], items = L.items();
+
+  // Games page: show ONLY a single banner image, if one is set
+  if (kind === "games" && safeUrl(GAMES_BANNER)) {
+    return siteShell(L.title, "games", `
+      <section style="padding:40px 0 24px;text-align:center">
+        <img src="${esc(GAMES_BANNER)}" alt="Supported games"
+          style="width:100%;max-width:1000px;height:auto;border-radius:16px;
+                 box-shadow:0 20px 60px rgba(0,0,0,.5),0 0 0 1px var(--line),0 0 50px rgba(224,31,58,.2)">
+      </section>`);
+  }
+
   let body;
   if (kind === "executors") {
     const pc = items.filter(e => !isMobileExec(e));
