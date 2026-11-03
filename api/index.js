@@ -69,8 +69,8 @@ const ADMIN_SECRET = process.env.ADMIN_SECRET || "";
 // ===== HOME PAGE CONTENT (edit these) =====
 const TAGLINE = "Get your key, pick your script, and start playing. Keys last 5 hours.";
 const LOGO_URL = "";     // optional: link to your own logo image (https://...)
-const DISCORD_URL = "https://discord.gg/YOUR-INVITE";        // your Discord invite ("" to hide)
-const YOUTUBE_URL = "https://youtube.com/@YOUR-CHANNEL";      // your YouTube channel ("" to hide)
+const DISCORD_URL = "https://discord.gg/QUkGjgdbp";        // your Discord invite ("" to hide)
+const YOUTUBE_URL = "https://www.youtube.com/@jirombv";      // your YouTube channel ("" to hide)
 
 // Add your supported games here. status: "Supported", "Updating" or "Unsupported"
 const GAMES = [
