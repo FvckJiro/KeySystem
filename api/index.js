@@ -35,7 +35,6 @@ const SITE_NAME = "ObsessionHub";             // shown at the top of every page
 const CHECKPOINTS = [
   "https://work.ink/2omP/checkpoint1",   // Checkpoint 1  -> target /checkpoint/1
   "https://work.ink/2omP/checkpoint2",   // Checkpoint 2  -> target /checkpoint/2
-  "https://work.ink/2omP/checkpoint3",   // Checkpoint 3  -> target /checkpoint/3
 ];
 const MIN_SECONDS_PER_CHECKPOINT = 10;        // finishing faster than this = bypass
 const REQUIRE_REFERER = true;                 // require coming back from an allowed ad site (below)
