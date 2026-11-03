@@ -33,11 +33,11 @@ const SITE_NAME = "ObsessionHub";             // shown at the top of every page
 // For Linkvertise: create the link with that target, then turn ON "Anti-Bypass" in the
 // Linkvertise dashboard for each link (that is Linkvertise's own server-side protection).
 const CHECKPOINTS = [
-  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-1",   // Checkpoint 1  -> target /checkpoint/1
-  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-2",   // Checkpoint 2  -> target /checkpoint/2
-  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-3",   // Checkpoint 3  -> target /checkpoint/3
-  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-4",   // Checkpoint 4  -> target /checkpoint/4
-  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-5",   // Checkpoint 5  -> target /checkpoint/5
+  "https://direct-link.net/10011031/B72fEGbf5kYG",   // Checkpoint 1  -> target /checkpoint/1
+  "https://link-hub.net/10011031/Cmbzeav4ae57",   // Checkpoint 2  -> target /checkpoint/2
+  "https://direct-link.net/10011031/hyRI1in6PVqp",   // Checkpoint 3  -> target /checkpoint/3
+  "https://direct-link.net/10011031/5hrHrbmgQA3Y",   // Checkpoint 4  -> target /checkpoint/4
+  "https://link-hub.net/10011031/ur61jQ6nbTzR",   // Checkpoint 5  -> target /checkpoint/5
 ];
 const MIN_SECONDS_PER_CHECKPOINT = 10;        // finishing faster than this = bypass
 const REQUIRE_REFERER = true;                 // require coming back from an allowed ad site (below)
@@ -85,8 +85,11 @@ const SCRIPTS = [
 // Add your executors here. status: "Working", "Updating" or "Down"
 // platform decides the section: "Android"/"iOS"/"Mobile" -> Mobile Executors, anything else -> PC Executors
 const EXECUTORS = [
-  // { name: "Swift", platform: "Windows", price: "Free", status: "Working", link: "https://..." },
-  // { name: "Delta", platform: "Android", price: "Free", status: "Working", link: "https://..." },
+  { name: "Madium", platform: "Windows", price: "Free", status: "Working", description: "test.", image: "https://postimg.cc/ZBdCxCMk/ea7dfd84", link: "https://your-download-link.com/swift" },
+  { name: "Wave", platform: "Windows", price: "Paid", status: "Working", description: "Premium Windows executor with fast updates and strong script support.", image: "https://picsum.photos/seed/wave/400/200", link: "https://your-download-link.com/wave" },
+  { name: "Delta", platform: "Android", price: "Free", status: "Working", description: "Popular free mobile executor for Android. Easy setup.", image: "https://picsum.photos/seed/delta/400/200", link: "https://your-download-link.com/delta" },
+  { name: "Codex", platform: "iOS", price: "Free", status: "Working", description: "Free iOS executor for iPhone and iPad. No jailbreak needed.", image: "https://picsum.photos/seed/codex/400/200", link: "https://your-download-link.com/codex" },
+];
 ];
 
 // FAQ on the home page: [question, answer]
