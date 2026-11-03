@@ -33,9 +33,9 @@ const SITE_NAME = "ObsessionHub";             // shown at the top of every page
 // For Linkvertise: create the link with that target, then turn ON "Anti-Bypass" in the
 // Linkvertise dashboard for each link (that is Linkvertise's own server-side protection).
 const CHECKPOINTS = [
-  "https://direct-link.net/10011031/B72fEGbf5kYG",   // Checkpoint 1
-  "https://link-hub.net/10011031/Cmbzeav4ae57",   // Checkpoint 2
-  "https://direct-link.net/10011031/hyRI1in6PVqp",   // Checkpoint 3
+  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-1",   // Checkpoint 1
+  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-2",   // Checkpoint 2
+  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-3",   // Checkpoint 3
 ];
 const MIN_SECONDS_PER_CHECKPOINT = 10;        // finishing faster than this = bypass
 const REQUIRE_REFERER = true;                 // require coming back from an allowed ad site (below)
@@ -43,8 +43,8 @@ const CHECK_FETCH_META = true;                // block bypass tools that fetch t
 const SESSION_TTL_SECONDS = 60 * 60;          // users have 1 hour to finish all checkpoints
 const POW_DIFFICULTY = 4;                     // browser security check strength: 3 light, 4 strong, 5 very strong (slower)
 const BIND_IP = true;                         // session must keep the same IP (set false if mobile users get false bypasses)
-const MAX_STRIKES = 5;                        // bypass attempts before a temporary IP ban
-const BAN_SECONDS = 60 * 60;                  // ban length
+const MAX_STRIKES = 3;                        // bypass attempts before a temporary IP ban
+const BAN_SECONDS = 5 * 60 * 60;              // ban length (5 hours)
 
 // ----- RED-SQUARE anti-bypass network (optional extra layer) -----
 // Wrap each checkpoint link with RED-SQUARE (kys.linkvertise.lol), turn on "ManualDetectionZ",
@@ -1136,7 +1136,7 @@ function sameClient(s, req) {
 
 const bannedPage = () => page("Blocked", `
   <h1 class="glitch" data-text="Blocked">Blocked</h1>
-  <p class="muted">Too many bypass attempts from your network. Try again in about an hour.</p>
+  <p class="muted">Too many bypass attempts from your network. Try again in about 5 hours.</p>
   <a class="btn" href="/">Back Home</a>`, "shield");
 
 const bypassPage = reason => page("Bypass Detected", `
