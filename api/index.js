@@ -33,9 +33,9 @@ const SITE_NAME = "ObsessionHub";             // shown at the top of every page
 // For Linkvertise: create the link with that target, then turn ON "Anti-Bypass" in the
 // Linkvertise dashboard for each link (that is Linkvertise's own server-side protection).
 const CHECKPOINTS = [
-  "https://direct-link.net/10011031/B72fEGbf5kYG",   // Checkpoint 1
-  "https://link-hub.net/10011031/Cmbzeav4ae57",   // Checkpoint 2
-  "https://direct-link.net/10011031/hyRI1in6PVqp",   // Checkpoint 3
+  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-1",   // Checkpoint 1
+  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-2",   // Checkpoint 2
+  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-3",   // Checkpoint 3
 ];
 const MIN_SECONDS_PER_CHECKPOINT = 10;        // finishing faster than this = bypass
 const REQUIRE_REFERER = true;                 // require coming back from an allowed ad site (below)
@@ -57,7 +57,7 @@ const REDSQUARE_HOST = process.env.REDSQUARE_HOST || "kys.linkvertise.lol"; // o
 const REDSQUARE_TIMEOUT_MS = 4000;
 // Detections with known false positives for normal users — not enough on their own to block.
 const REDSQUARE_IGNORE = ["referer_missmatch", "DeadHand_MagnusX7"];
-const KEY_TTL_SECONDS = 24 * 60 * 60;         // free key lifetime
+const KEY_TTL_SECONDS = 5 * 60 * 60;          // free key lifetime (5 hours)
 const RESET_COOLDOWN_SECONDS = 12 * 60 * 60;  // user HWID reset cooldown
 const MAX_KEYS_PER_IP_PER_DAY = 5;
 // Domains users are allowed to return from. Linkvertise redirects through several of these.
@@ -65,7 +65,7 @@ const ALLOWED_REFERRERS = ["lootlabs.gg", "work.ink", "linkvertise.com", "link-t
 const ADMIN_SECRET = process.env.ADMIN_SECRET || "";
 
 // ===== HOME PAGE CONTENT (edit these) =====
-const TAGLINE = "Get your key, pick your script, and start playing. Keys last 24 hours.";
+const TAGLINE = "Get your key, pick your script, and start playing. Keys last 5 hours.";
 const LOGO_URL = "";     // optional: link to your own logo image (https://...)
 const DISCORD_URL = "https://discord.gg/YOUR-INVITE";        // your Discord invite ("" to hide)
 const YOUTUBE_URL = "https://youtube.com/@YOUR-CHANNEL";      // your YouTube channel ("" to hide)
@@ -87,7 +87,7 @@ const EXECUTORS = [
 
 // FAQ on the home page: [question, answer]
 const FAQ = [
-  ["How long does a key last?", "Free keys last 24 hours. After that, just get a new one."],
+  ["How long does a key last?", "Free keys last 5 hours. After that, just get a new one."],
   ["Why does my key say wrong device?", "Keys lock to the first device that uses them. Open the Key Checker and tap Reset HWID."],
   ["How often can I reset my HWID?", "Once every 12 hours per key."],
   ["Why did I get Bypass Detected?", "Ad bypassers and skipping checkpoints aren't allowed. Start over and complete each checkpoint normally."],
@@ -110,21 +110,42 @@ function randomKey() {
 }
 
 // Creates a unique key. ttlSeconds = null makes it a lifetime key (never expires).
-async function createKey(ttlSeconds, type) {
+// opts: { maxDevices (default 1), label (custom name shown to users, e.g. "PREMIUM") }
+async function createKey(ttlSeconds, type, opts = {}) {
+  const maxdev = Math.min(100, Math.max(1, Math.floor(Number(opts.maxDevices) || 1)));
+  const label = (typeof opts.label === "string" ? opts.label.trim() : "").slice(0, 24);
   for (let i = 0; i < 5; i++) {
     const candidate = randomKey();
     if (await redis.hsetnx("key:" + candidate, "created", Date.now()) === 1) {
       const at = Date.now();
-      await redis.hset("key:" + candidate, { type });
+      const fields = { type, maxdev };
+      if (label) fields.label = label;
+      await redis.hset("key:" + candidate, fields);
       if (ttlSeconds) await redis.expire("key:" + candidate, ttlSeconds);
       // Log for the admin "Generated Keys" view (keep the last 100, count the total)
-      await redis.lpush("recent:keys", JSON.stringify({ key: candidate, at, type }));
+      await redis.lpush("recent:keys", JSON.stringify({ key: candidate, at, type, label, maxdev }));
       await redis.ltrim("recent:keys", 0, 99);
       await redis.incr("stats:generated");
       return candidate;
     }
   }
   throw new Error("Could not generate unique key");
+}
+
+// Read how many devices a key is bound to, and its limit (handles legacy single-hwid keys)
+function deviceInfo(data) {
+  const max = Math.max(1, Math.floor(Number(data.maxdev) || 1));
+  let raw = data.hwids != null ? String(data.hwids) : "";
+  if (!raw && data.hwid) raw = String(data.hwid);
+  const hwids = raw ? raw.split(",").filter(Boolean) : [];
+  return { hwids, count: hwids.length, max };
+}
+
+// A friendly display name for a key's tier (custom label wins)
+function keyLabel(data) {
+  if (data.label) return String(data.label);
+  const t = data.type;
+  return t === "lifetime" ? "Lifetime" : t === "admin" ? "Premium" : "Free";
 }
 
 function isAllowedReferer(referer) {
@@ -149,12 +170,29 @@ function formatDuration(seconds) {
   return `in ${d}d ${h}h ${m}m`;
 }
 
-// Atomic: 0 = key missing/expired, 1 = OK (binds HWID on first use), 2 = HWID mismatch
+// Atomic multi-device check.
+// Returns: 0 = key missing/expired, 1 = OK (binds this device if there's room), 2 = device limit reached.
+// Devices are stored as a comma-separated list in the 'hwids' field; 'maxdev' is how many are allowed.
 const CHECK_SCRIPT = `
 if redis.call('EXISTS', KEYS[1]) == 0 then return 0 end
-local cur = redis.call('HGET', KEYS[1], 'hwid')
-if not cur then redis.call('HSET', KEYS[1], 'hwid', ARGV[1]) return 1 end
-if cur == ARGV[1] then return 1 end
+local maxdev = tonumber(redis.call('HGET', KEYS[1], 'maxdev')) or 1
+local hwids = redis.call('HGET', KEYS[1], 'hwids')
+if (not hwids) or hwids == '' then
+  local legacy = redis.call('HGET', KEYS[1], 'hwid')
+  if legacy and legacy ~= '' then hwids = legacy end
+end
+hwids = hwids or ''
+local list = {}
+for id in string.gmatch(hwids, '([^,]+)') do
+  if id == ARGV[1] then return 1 end
+  list[#list + 1] = id
+end
+if #list < maxdev then
+  list[#list + 1] = ARGV[1]
+  redis.call('HSET', KEYS[1], 'hwids', table.concat(list, ','))
+  redis.call('HDEL', KEYS[1], 'hwid')
+  return 1
+end
 return 2`;
 
 // ===== DESIGN =====
@@ -951,7 +989,7 @@ function homePage() {
   const faq = FAQ.map(([q, a], i) => `
     <details class="reveal" style="transition-delay:${i * 60}ms"><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join("");
 
-  const ticker = ["Keys online", `${GAMES.length} games supported`, "HWID locked", "Anti-bypass active", "24h keys", "Lifetime keys available", "Key checker live"]
+  const ticker = ["Keys online", `${GAMES.length} games supported`, "HWID locked", "Anti-bypass active", "5h keys", "Lifetime keys available", "Key checker live"]
     .map(t => `<span><b>◆</b> ${t}</span>`).join("");
 
   return siteShell("Home", "home", `
@@ -988,7 +1026,7 @@ function homePage() {
     <div class="steps">
       <div class="tile reveal"><div class="num">1</div><h4>Complete ${cpText}</h4><p>Tap Get Key and finish each short checkpoint in order.</p></div>
       <div class="tile reveal" style="transition-delay:80ms"><div class="num">2</div><h4>Pass the security check</h4><p>Hold to verify after each checkpoint. It takes a second.</p></div>
-      <div class="tile reveal" style="transition-delay:160ms"><div class="num">3</div><h4>Copy your key</h4><p>Paste it in the script. It lasts 24 hours and locks to your device.</p></div>
+      <div class="tile reveal" style="transition-delay:160ms"><div class="num">3</div><h4>Copy your key</h4><p>Paste it in the script. It lasts 5 hours and locks to your device.</p></div>
     </div>
   </section>
 
@@ -1483,12 +1521,14 @@ app.get("/checker", (req, res) => {
               resBox.innerHTML = '<div class="result">' + row("Status", "Invalid or expired", "s-bad") + '</div>';
               return;
             }
-            var type = d.type === "lifetime" ? "Lifetime" : d.type === "admin" ? "Premium" : "Free";
+            var devTxt = (d.devicesMax > 1)
+              ? (d.devicesUsed + " / " + d.devicesMax + " devices")
+              : (d.hwidLocked ? "Locked to a device" : "Not used yet");
             resBox.innerHTML = '<div class="result">'
               + row("Status", d.blacklisted ? "Blacklisted" : "Active", d.blacklisted ? "s-bad" : "s-ok")
-              + row("Type", type)
+              + row("Type", d.label || "Free")
               + row("Time left", d.lifetime ? "Never expires" : '<span id="left">' + fmt(d.expiresIn) + '</span>')
-              + row("Device", d.hwidLocked ? "Locked to a device" : "Not used yet")
+              + row("Device", devTxt)
               + '</div>'
               + (d.hwidLocked && !d.blacklisted ? '<button id="reset" class="ghost" style="width:100%;margin:12px 0 0">Reset HWID</button>' : '');
            
@@ -1532,14 +1572,19 @@ app.post("/api/key-status", wrap(async (req, res) => {
   const data = await redis.hgetall("key:" + key);
   if (!data) return res.json({ exists: false });
   const ttl = await redis.ttl("key:" + key);
-  const hwid = data.hwid != null ? String(data.hwid) : "";
+  const dev = deviceInfo(data);
+  let blacklisted = false;
+  for (const h of dev.hwids) { if (await redis.hexists("blacklist", h) === 1) { blacklisted = true; break; } }
   res.json({
     exists: true,
     type: data.type || "free",
+    label: keyLabel(data),
     lifetime: ttl === -1,
     expiresIn: ttl === -1 ? null : ttl,
-    hwidLocked: !!hwid,
-    blacklisted: hwid ? (await redis.hexists("blacklist", hwid)) === 1 : false,
+    hwidLocked: dev.count > 0,
+    devicesUsed: dev.count,
+    devicesMax: dev.max,
+    blacklisted,
   });
 }));
 
@@ -1560,7 +1605,7 @@ app.post("/reset-hwid", wrap(async (req, res) => {
     return res.json({ success: false, reason: "cooldown", retryInSeconds: ttl });
   }
 
-  await redis.hdel("key:" + key, "hwid");
+  await redis.hdel("key:" + key, "hwid", "hwids");
   res.json({ success: true });
 }));
 
@@ -1579,6 +1624,8 @@ app.post("/admin/api/create-key", wrap(async (req, res) => {
   const days = Math.max(0, Math.floor(Number(req.body.days) || 0));
   const hours = Math.max(0, Math.floor(Number(req.body.hours) || 0));
   const amount = Math.min(50, Math.max(1, Math.floor(Number(req.body.amount) || 1)));
+  const devices = Math.min(100, Math.max(1, Math.floor(Number(req.body.devices) || 1)));
+  const label = (typeof req.body.label === "string" ? req.body.label.trim() : "").slice(0, 24);
   const ttl = (days * 24 + hours) * 3600;
 
   if (!lifetime && ttl <= 0) {
@@ -1587,12 +1634,20 @@ app.post("/admin/api/create-key", wrap(async (req, res) => {
   if (!lifetime && days > 3650) {
     return res.json({ success: false, error: "Max 3650 days. Use Lifetime instead." });
   }
+  if (label && !/^[\w \-]{1,24}$/.test(label)) {
+    return res.json({ success: false, error: "Label: letters, numbers, spaces, - and _ only" });
+  }
 
+  const type = label ? "custom" : (lifetime ? "lifetime" : "admin");
   const keys = [];
   for (let i = 0; i < amount; i++) {
-    keys.push(await createKey(lifetime ? null : ttl, lifetime ? "lifetime" : "admin"));
+    keys.push(await createKey(lifetime ? null : ttl, type, { maxDevices: devices, label }));
   }
-  res.json({ success: true, duration: lifetime ? "lifetime" : `${days}d ${hours}h`, keys });
+  res.json({
+    success: true,
+    duration: lifetime ? "lifetime" : `${days}d ${hours}h`,
+    devices, label: label || null, keys,
+  });
 }));
 
 app.post("/admin/api/key-info", wrap(async (req, res) => {
@@ -1600,10 +1655,13 @@ app.post("/admin/api/key-info", wrap(async (req, res) => {
   const data = await redis.hgetall("key:" + key);
   if (!data) return res.json({ exists: false });
   const ttl = await redis.ttl("key:" + key);
+  const dev = deviceInfo(data);
   res.json({
     exists: true,
+    name: keyLabel(data),
     type: data.type || "free",
-    hwid: data.hwid != null ? String(data.hwid) : null,
+    devices: dev.count + " / " + dev.max,
+    hwids: dev.hwids.length ? dev.hwids : null,
     created: new Date(Number(data.created)).toISOString(),
     expires: ttl === -1 ? "never (lifetime)" : formatDuration(ttl),
   });
@@ -1611,7 +1669,7 @@ app.post("/admin/api/key-info", wrap(async (req, res) => {
 
 app.post("/admin/api/reset-hwid", wrap(async (req, res) => {
   const key = str(req.body.key);
-  await redis.hdel("key:" + key, "hwid");
+  await redis.hdel("key:" + key, "hwid", "hwids");
   await redis.del("resetcd:" + key);
   res.json({ success: true });
 }));
@@ -1626,12 +1684,16 @@ app.post("/admin/api/blacklist", wrap(async (req, res) => {
   const key = str(req.body.key);
   const reason = str(req.body.reason) || "No reason given";
 
-  // Blacklist by key: looks up the HWID bound to it, then revokes the key
+  // Blacklist by key: looks up every HWID bound to it, bans them all, then revokes the key
   if (!hwid && key) {
-    const bound = await redis.hget("key:" + key, "hwid");
-    if (bound == null) return res.json({ success: false, error: "Key has no HWID bound yet" });
-    hwid = String(bound);
+    const data = await redis.hgetall("key:" + key);
+    const dev = data ? deviceInfo(data) : { hwids: [] };
+    if (!dev.hwids.length) return res.json({ success: false, error: "Key has no device bound yet" });
+    const entry = {};
+    for (const h of dev.hwids) if (HWID_RE.test(h)) entry[h] = reason;
+    await redis.hset("blacklist", entry);
     await redis.del("key:" + key);
+    return res.json({ success: true, hwids: Object.keys(entry), reason });
   }
   if (!HWID_RE.test(hwid)) return res.json({ success: false, error: "Invalid HWID" });
 
@@ -1668,6 +1730,10 @@ app.get("/admin", (req, res) => {
       <input id="days" type="number" min="0" inputmode="numeric" placeholder="Days">
       <input id="hours" type="number" min="0" inputmode="numeric" placeholder="Hours">
       <input id="amount" type="number" min="1" max="50" inputmode="numeric" placeholder="Amount" value="1">
+    </div>
+    <div class="row">
+      <input id="devices" type="number" min="1" max="100" inputmode="numeric" placeholder="Devices" value="1">
+      <input id="label" placeholder="Name (e.g. PREMIUM)" autocomplete="off" maxlength="24">
     </div>
     <label class="check"><input id="lifetime" type="checkbox">Lifetime key (never expires)</label>
     <div class="grid">
@@ -1717,13 +1783,16 @@ app.get("/admin", (req, res) => {
                 headers: { "Content-Type": "application/json", "x-admin-secret": v("secret") },
                 body: JSON.stringify({
                   key: v("key"), hwid: v("hwid"), reason: v("reason"),
-                  days: v("days"), hours: v("hours"), amount: v("amount"), lifetime: life.checked
+                  days: v("days"), hours: v("hours"), amount: v("amount"), lifetime: life.checked,
+                  devices: v("devices"), label: v("label")
                 })
               });
               var d = await r.json();
               if (btn.dataset.a === "create-key" && d.success) {
                 lastKeys = d.keys;
-                out.textContent = "Duration: " + d.duration + "\\n\\n" + d.keys.join("\\n");
+                var head = "Name: " + (d.label || (life.checked ? "Lifetime" : "Premium")) +
+                  "  ·  Duration: " + d.duration + "  ·  Devices: " + d.devices;
+                out.textContent = head + "\\n\\n" + d.keys.join("\\n");
                 copyBtn.style.display = "inline-block"; copyBtn.textContent = "Copy Keys";
               } else if (btn.dataset.a === "recent" && d.items) {
                 renderRecent(d);
