@@ -1348,6 +1348,7 @@ app.get("/getkey", wrap(async (req, res) => {
   const s = (await getSession(req)) || (await newSession(req, res));
   const justDone = parseInt(req.query.done, 10);
   const celebrate = justDone >= 1 && justDone <= s.step;
+  const retried = req.query.retry === "1";
 
   // ---- All checkpoints done: the key ----
   if (s.step >= total) {
@@ -1423,7 +1424,7 @@ app.get("/getkey", wrap(async (req, res) => {
     <a class="btn go wait" id="go" href="/go/${next}" data-label="Start Checkpoint ${next} →" data-celeb="${celebrate ? 1 : 0}"><span>Preparing checkpoint...</span></a>
     <p class="muted" style="font-size:.8rem;margin-top:12px">Finish the page that opens and you'll come back here automatically.<br>Bypassers are detected and reset your progress.</p>
     <div class="warp" id="warp"><div class="spin"></div><b>Entering Checkpoint ${next}</b><small>Hold tight...</small></div>
-    ${celebrate ? toast(`Checkpoint ${justDone} complete!`) : ""}
+    ${celebrate ? toast(`Checkpoint ${justDone} complete!`) : retried ? toast(`Let's try Checkpoint ${next} again`) : ""}
     <script>
       (function(){
         ["warp", "toast"].forEach(function(id){ var e = document.getElementById(id); if (e) document.body.appendChild(e); });
@@ -1555,26 +1556,34 @@ app.get("/checkpoint/:n", wrap(async (req, res) => {
     return res.send(verifyPage(s.step, n, s.challenge));
   }
 
-  const fail = async reason => {
-    await resetSession(s);
-    await addStrike(req);
-    res.status(403).send(bypassPage(reason));
+  // SOFT fail: the flow hiccuped (lost timing, odd referrer, out-of-order). This is NOT
+  // proof of a bypass tool, so we only reset progress on this checkpoint and send the user
+  // back to Get Key to retry. We do NOT add a strike / ban here -- false positives from ad
+  // networks were banning real users. The real bypass gate is the verify step below
+  // (proof-of-work + hold-to-verify + bot detection), which ad-bypassers cannot pass.
+  const softFail = async () => {
+    // Clear only the in-flight state for THIS attempt (keep completed checkpoints / s.step).
+    await redis.hset("session:" + s.sid, { startedAt: 0, pending: 0, challenge: "", chAt: 0 });
+    res.redirect("/getkey?retry=1");
   };
 
-  if (n !== s.step + 1) return fail("Checkpoints must be completed in order.");
-  if (!s.startedAt) return fail("This checkpoint wasn't started from this site.");
-  if ((Date.now() - s.startedAt) / 1000 < MIN_SECONDS_PER_CHECKPOINT) return fail("That checkpoint was finished too fast.");
-  // Lenient referrer check: ad networks often strip the referrer, so a MISSING referrer is allowed.
-  // Only block when a referrer is present but is NOT an allowed ad domain.
-  if (REQUIRE_REFERER && req.headers.referer && !isAllowedReferer(req.headers.referer)) return fail("This checkpoint wasn't completed through the official link.");
-  const meta = checkFetchMeta(req);
-  if (meta) return fail(meta);
-  const client = sameClient(s, req);
-  if (client) return fail(client);
-  const rs = await redSquareVerdict(req);
-  if (rs) return fail("Bypass " + rs);
+  if (n !== s.step + 1) return softFail();
 
-  // Passed the server checks; now the browser security check
+  // startedAt proves they launched this checkpoint from our site. Ad networks sometimes
+  // drop our round-trip state, so instead of hard-blocking when it's missing we arm it now
+  // and send them straight to the human check (the PoW + hold is what actually stops bots).
+  if (!s.startedAt) {
+    await redis.hset("session:" + s.sid, { startedAt: Date.now() });
+  } else if ((Date.now() - s.startedAt) / 1000 < MIN_SECONDS_PER_CHECKPOINT) {
+    // Came back almost instantly with a real start time -> likely skipped the page. Retry.
+    return softFail();
+  }
+
+  // Lenient referrer check: ad networks often strip the referrer, so a MISSING referrer is
+  // allowed. Only retry when a referrer is present but is clearly not an allowed ad domain.
+  if (REQUIRE_REFERER && req.headers.referer && !isAllowedReferer(req.headers.referer)) return softFail();
+
+  // Passed the soft checks; now the real browser security check (this is the anti-bypass gate)
   const challenge = "c" + crypto.randomBytes(12).toString("hex");
   await redis.hset("session:" + s.sid, { pending: n, challenge, chAt: Date.now(), startedAt: 0 });
   res.send(verifyPage(s.step, n, challenge));
