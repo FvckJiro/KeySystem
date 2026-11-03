@@ -19,10 +19,10 @@
 
 --========================[ CONFIG — EDIT THIS ]========================--
 local Config = {
-    Website   = "https://your-site.vercel.app",      -- your key site (NO trailing slash)
-    GetKeyURL = "https://your-site.vercel.app/getkey", -- where users get a key
-    Discord   = "https://discord.gg/YOUR-INVITE",      -- "" to hide the button
-    Youtube   = "https://youtube.com/@YOUR-CHANNEL",    -- "" to hide the button
+    Website   = "https://keysystem-orcin-sigma.vercel.app",      -- your key site (NO trailing slash)
+    GetKeyURL = "https://keysystem-orcin-sigma.vercel.app/getkey", -- where users get a key
+    Discord   = "https://discord.gg/G6gsENX87",      -- "" to hide the button
+    Youtube   = "https://www.youtube.com/@jirombv",    -- "" to hide the button
 
     RememberKey = true,   -- save the key on this device so users don't retype it
     CloseAfterLoad = true, -- close the window after a script loads
@@ -36,7 +36,7 @@ local Config = {
     --   url         = GitHub raw link to the .lua script
     --   requiresKey = true -> needs a valid key, false -> free/no key
     Scripts = {
-        { name = "Blox Fruits",  url = "https://raw.githubusercontent.com/YOU/REPO/main/bloxfruits.lua", requiresKey = true },
+        { name = "Tap Simulator",  url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/TapSimulator.lua", requiresKey = true },
         { name = "Blade Ball",   url = "https://raw.githubusercontent.com/YOU/REPO/main/bladeball.lua",  requiresKey = true },
         { name = "Universal Hub", url = "https://raw.githubusercontent.com/YOU/REPO/main/universal.lua", requiresKey = true },
         { name = "Free Script",  url = "https://raw.githubusercontent.com/YOU/REPO/main/free.lua",       requiresKey = false },
