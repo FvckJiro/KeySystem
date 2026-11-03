@@ -19,11 +19,11 @@
 
 --========================[ CONFIG — EDIT THIS ]========================--
 local Config = {
-    Website   = "https://keysystem-orcin-sigma.vercel.app",      -- your key site (NO trailing slash)
-    GetKeyURL = "https://keysystem-orcin-sigma.vercel.app/getkey", -- where users get a key
-    Discord   = "https://discord.gg/D8SM7VfTKZ",      -- "" to hide the button
-    Youtube   = "https://www.youtube.com/@jirombv",    -- "" to hide the button
-    Premium   = "https://discord.gg/D8SM7VfTKZ",      -- Buy Premium link ("" to hide)
+    Website   = "https://your-site.vercel.app",      -- your key site (NO trailing slash)
+    GetKeyURL = "https://your-site.vercel.app/getkey", -- where users get a key
+    Discord   = "https://discord.gg/YOUR-INVITE",      -- "" to hide the button
+    Youtube   = "https://youtube.com/@YOUR-CHANNEL",    -- "" to hide the button
+    Premium   = "https://discord.gg/YOUR-INVITE",      -- Buy Premium link ("" to hide)
 
     RememberKey = true,   -- save the key on this device so users don't retype it
     CloseAfterLoad = true, -- close the window after a script loads
@@ -41,7 +41,7 @@ local Config = {
     -- To find a Place ID: open the game's Roblox page, the number in the URL
     -- (roblox.com/games/XXXXXXXXXX/...) is the Place ID.
     Scripts = {
-        { name = "Tap Simulator",   url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/TapSimulator.lua", requiresKey = true,  placeIds = { 72858262610964, 10629695169, } },
+        { name = "Blox Fruits",   url = "https://raw.githubusercontent.com/YOU/REPO/main/bloxfruits.lua", requiresKey = true,  placeIds = { 2753915549, 4442272183, 7449423635 } },
         { name = "Blade Ball",    url = "https://raw.githubusercontent.com/YOU/REPO/main/bladeball.lua",  requiresKey = true,  placeIds = { 13772394625 } },
         { name = "Free Script",   url = "https://raw.githubusercontent.com/YOU/REPO/main/free.lua",       requiresKey = false, placeIds = { 123456789 } },
         { name = "Universal Hub", url = "https://raw.githubusercontent.com/YOU/REPO/main/universal.lua", requiresKey = true,  universal = true },
@@ -279,6 +279,26 @@ root.Parent = gui
 corner(root, 18)
 root.ClipsDescendants = true
 strokeOf(root, T.stroke, 1)
+
+-- responsive: scale the whole loader down to fit small / mobile screens
+local uiScale = Instance.new("UIScale", root)
+uiScale.Scale = 1
+local function fitScreen()
+    local cam = workspace and workspace.CurrentCamera
+    local vp = (cam and cam.ViewportSize) or Vector2.new(1280, 720)
+    -- leave a margin; never upscale past 1, never below 0.5
+    local s = math.min(1, (vp.X - 28) / 410, (vp.Y - 48) / 552)
+    uiScale.Scale = math.clamp(s, 0.5, 1)
+end
+pcall(fitScreen)
+pcall(function()
+    if workspace then
+        workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(fitScreen)
+        if workspace.CurrentCamera then
+            workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(fitScreen)
+        end
+    end
+end)
 
 -- animated glow border (red -> violet -> blue, rotating)
 local glow = Instance.new("UIStroke", root)
