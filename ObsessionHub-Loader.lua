@@ -44,6 +44,8 @@ local Config = {
         { name = "Tap Simulator",   url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/TapSimulator.lua", requiresKey = true,  placeIds = { 72858262610964, 10629695169 } },
         { name = "Death Ball",    url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/BladeBall.lua",  requiresKey = true,  placeIds = { 5166944221, 15002061926 } },
         { name = "Break And Steal An Egg",   url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/BreakAndSteal.lua",       requiresKey = true, placeIds = { 114326934417838 } },
+        { name = "Anime Dice",   url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/AnimeDice.lua",       requiresKey = true, placeIds = { 113290951185459, 10708913337 } },
+        { name = "Break And Steal An Egg",   url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/BreakAndSteal.lua",       requiresKey = true, placeIds = { 114326934417838 } },
         { name = "Universal Hub", url = "https://raw.githubusercontent.com/YOU/REPO/main/universal.lua", requiresKey = true,  universal = true },
     },
 
