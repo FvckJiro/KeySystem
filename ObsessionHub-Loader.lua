@@ -19,7 +19,7 @@
 
 --========================[ CONFIG — EDIT THIS ]========================--
 local Config = {
-    Website   = "https://keysystem-orcin-sigma.vercel.app/",      -- your key site (NO trailing slash)
+    Website   = "https://keysystem-orcin-sigma.vercel.app",      -- your key site (NO trailing slash)
     GetKeyURL = "https://keysystem-orcin-sigma.vercel.app/getkey", -- where users get a key
     Discord   = "https://discord.gg/Qy8W4JHQ4n",      -- "" to hide the button
     Youtube   = "https://www.youtube.com/@jirombv",    -- "" to hide the button
