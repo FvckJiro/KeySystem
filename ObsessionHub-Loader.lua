@@ -19,13 +19,17 @@
 
 --========================[ CONFIG — EDIT THIS ]========================--
 local Config = {
-    Website   = "https://keysystem-orcin-sigma.vercel.app",      -- your key site (NO trailing slash)
-    GetKeyURL = "https://keysystem-orcin-sigma.vercel.app/getkey", -- where users get a key
-    Discord   = "https://discord.gg/Qy8W4JHQ4n",      -- "" to hide the button
-    Youtube   = "https://www.youtube.com/@jirombv",    -- "" to hide the button
+    Website   = "https://your-site.vercel.app",      -- your key site (NO trailing slash)
+    GetKeyURL = "https://your-site.vercel.app/getkey", -- where users get a key
+    Discord   = "https://discord.gg/YOUR-INVITE",      -- "" to hide the button
+    Youtube   = "https://youtube.com/@YOUR-CHANNEL",    -- "" to hide the button
 
     RememberKey = true,   -- save the key on this device so users don't retype it
     CloseAfterLoad = true, -- close the window after a script loads
+
+    -- Kick the player when their key expires or gets revoked while playing
+    KickOnExpire = true,
+    RecheckSeconds = 180, -- how often to re-check the key in the background (seconds)
 
     -- Your scripts. Add as many as you want.
     --   name        = what shows in the list
@@ -160,6 +164,29 @@ local function loadScript(entry)
     end
     task.spawn(fn)
     return true
+end
+
+-- Background watchdog: re-check the key while playing and kick on expiry/revoke.
+-- Only started for key-required scripts.
+local keyWatchStarted = false
+local function startKeyWatch(key)
+    if not Config.KickOnExpire or keyWatchStarted then return end
+    keyWatchStarted = true
+    task.spawn(function()
+        while true do
+            task.wait(math.max(30, Config.RecheckSeconds or 180))
+            local ok, reason = verifyKey(key)
+            -- Only kick when the server clearly rejects the key (expired/blacklisted/mismatch).
+            -- Network errors are ignored so a brief outage doesn't kick paying users.
+            if not ok and reason ~= "Can't reach the server" and reason ~= "Bad server response"
+                and reason ~= "Server error" and not tostring(reason):find("Server error") then
+                pcall(function()
+                    LocalPlayer:Kick("\n[ObsessionHub]\nYour key expired or is no longer valid.\nGet a new key to keep playing.")
+                end)
+                break
+            end
+        end
+    end)
 end
 
 --// UI -----------------------------------------------------------------
@@ -524,6 +551,7 @@ loadBtn.MouseButton1Click:Connect(function()
         loadBtn.Text = "LOADING..."
         local loaded = loadScript(entry)
         if loaded then
+            startKeyWatch(tostring(key):gsub("%s+", ""):upper())
             setStatus("Loaded " .. entry.name, T.good)
             notify("ObsessionHub", entry.name .. " loaded", 4)
             if Config.CloseAfterLoad then task.wait(0.6); gui:Destroy() end
