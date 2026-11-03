@@ -978,21 +978,6 @@ function homePage() {
     </div>
   </section>
 
-  ${preview("games")}
-  ${preview("scripts")}
-  ${preview("executors")}
-
-  <section>
-    <div class="band reveal">
-      <h2>Already have a key?</h2>
-      <p>Check how much time it has left, or reset it for a new device.</p>
-      <form action="/checker" method="get">
-        <input name="key" placeholder="${KEY_PLACEHOLDER}" autocomplete="off" spellcheck="false">
-        <button type="submit">Check Key</button>
-      </form>
-    </div>
-  </section>
-
   <section id="faq" class="faq">
     <div class="sec-head reveal"><h2>FAQ</h2><p>Quick answers to common questions.</p></div>
     ${faq}
