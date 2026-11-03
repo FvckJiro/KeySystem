@@ -74,7 +74,7 @@ const YOUTUBE_URL = "https://www.youtube.com/@jirombv";      // your YouTube cha
 
 // Add your supported games here. status: "Supported", "Updating" or "Unsupported"
 const GAMES = [
-  // { name: "Game Name", status: "Supported", description: "Short note", image: "https://... (thumbnail)", link: "https://www.roblox.com/games/..." },
+   { name: "Universal", status: "Supported", description: "List of Supported", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/suppoted.png", link: "https://www.roblox.com" },
 ];
 
 // Add your scripts here. status: "Working", "Updating" or "Patched"
