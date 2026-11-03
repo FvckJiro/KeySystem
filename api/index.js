@@ -1221,6 +1221,11 @@ function getCookie(req, name) {
   return m ? decodeURIComponent(m[1]) : "";
 }
 
+// Session cookie. SameSite=Lax is sent on top-level navigations (including the return from the
+// ad network) and, unlike SameSite=None, is not dropped by browsers that block third-party
+// cookies -- which was causing progress to reset to Checkpoint 1 on mobile/in-app browsers.
+const cookieHeader = sid => `ks_sid=${sid}; Path=/; Max-Age=${SESSION_TTL_SECONDS}; HttpOnly; Secure; SameSite=Lax`;
+
 async function getSession(req) {
   const sid = getCookie(req, "ks_sid");
   if (!SID_RE.test(sid)) return null;
@@ -1244,8 +1249,10 @@ async function newSession(req, res) {
   const fresh = { step: 0, startedAt: 0, ua: uaHash(req), ip: getIp(req), pending: 0, challenge: "", chAt: 0 };
   await redis.hset("session:" + sid, fresh);
   await redis.expire("session:" + sid, SESSION_TTL_SECONDS);
-  // SameSite=None so the cookie survives the round-trip through the ad network (cross-site)
-  res.setHeader("Set-Cookie", `ks_sid=${sid}; Path=/; Max-Age=${SESSION_TTL_SECONDS}; HttpOnly; Secure; SameSite=None`);
+  // SameSite=Lax: survives the top-level navigation back from the ad network, and (unlike None)
+  // is NOT dropped by mobile/in-app browsers that block third-party cookies -- which was wiping
+  // progress and resetting users to Checkpoint 1.
+  res.setHeader("Set-Cookie", cookieHeader(sid));
   return { sid, key: "", ...fresh };
 }
 
@@ -1657,12 +1664,12 @@ app.post("/checkpoint/verify", wrap(async (req, res) => {
   await redis.hset("session:" + sid, { step: n, pending: 0, challenge: "", chAt: 0 });
   // Re-anchor the cookie to this session so the next checkpoint's Get Key page tracks it, even if
   // the ad round-trip landed the verify POST in a different cookie context.
-  res.setHeader("Set-Cookie", `ks_sid=${sid}; Path=/; Max-Age=${SESSION_TTL_SECONDS}; HttpOnly; Secure; SameSite=None`);
+  res.setHeader("Set-Cookie", cookieHeader(sid));
   res.json({ ok: true, next: "/getkey?done=" + n });
 }));
 
 // Build marker so you can confirm which version Vercel is actually running.
-app.get("/version", (req, res) => res.json({ build: "cp-verify-v3", checkpoints: CHECKPOINTS.length }));
+app.get("/version", (req, res) => res.json({ build: "cp-cookie-v4", checkpoints: CHECKPOINTS.length }));
 
 // Old link still works
 app.get("/generate-key", (req, res) => res.redirect("/getkey"));
