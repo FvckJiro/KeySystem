@@ -1698,7 +1698,7 @@ app.post("/checkpoint/verify", wrap(async (req, res) => {
 }));
 
 // Build marker so you can confirm which version Vercel is actually running.
-app.get("/version", (req, res) => res.json({ build: "cp-ipbridge-v6", checkpoints: CHECKPOINTS.length }));
+app.get("/version", (req, res) => res.json({ build: "cp-ipbridge-v6r", checkpoints: CHECKPOINTS.length }));
 
 // Debug: shows how the server resolves your session right now (cookie vs URL vs IP bridge).
 app.get("/whoami", wrap(async (req, res) => {
@@ -1713,6 +1713,16 @@ app.get("/whoami", wrap(async (req, res) => {
     urlSid: urlSid || null,
     ipBridgeSid: ipSid || null,
   });
+}));
+
+// Start completely fresh (clears your session + IP bridge) so you re-do every checkpoint.
+// Handy for testing. Real users never need it.
+app.get("/reset", wrap(async (req, res) => {
+  const s = await getSession(req);
+  if (s) await redis.del("session:" + s.sid);
+  await redis.del("ipsess:" + getIp(req));
+  res.setHeader("Set-Cookie", `ks_sid=; Path=/; Max-Age=0`);
+  res.redirect("/getkey");
 }));
 
 // Old link still works
