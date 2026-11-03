@@ -19,10 +19,11 @@
 
 --========================[ CONFIG — EDIT THIS ]========================--
 local Config = {
-    Website   = "https://keysystem-orcin-sigma.vercel.app",      -- your key site (NO trailing slash)
-    GetKeyURL = "https://keysystem-orcin-sigma.vercel.app/getkey", -- where users get a key
-    Discord   = "https://discord.gg/G6gsENX87",      -- "" to hide the button
-    Youtube   = "https://www.youtube.com/@jirombv",    -- "" to hide the button
+    Website   = "https://your-site.vercel.app",      -- your key site (NO trailing slash)
+    GetKeyURL = "https://your-site.vercel.app/getkey", -- where users get a key
+    Discord   = "https://discord.gg/YOUR-INVITE",      -- "" to hide the button
+    Youtube   = "https://youtube.com/@YOUR-CHANNEL",    -- "" to hide the button
+    Premium   = "https://discord.gg/YOUR-INVITE",      -- Buy Premium link ("" to hide)
 
     RememberKey = true,   -- save the key on this device so users don't retype it
     CloseAfterLoad = true, -- close the window after a script loads
@@ -31,15 +32,19 @@ local Config = {
     KickOnExpire = true,
     RecheckSeconds = 180, -- how often to re-check the key in the background (seconds)
 
-    -- Your scripts. Add as many as you want.
-    --   name        = what shows in the list
+    -- Your scripts. The loader auto-detects the game by its Place ID and loads the match.
+    --   name        = shown in the loader
     --   url         = GitHub raw link to the .lua script
     --   requiresKey = true -> needs a valid key, false -> free/no key
+    --   placeIds    = { } Roblox Place IDs this script supports (a game can have several)
+    --   universal   = true -> used for ANY game when no specific script matches
+    -- To find a Place ID: open the game's Roblox page, the number in the URL
+    -- (roblox.com/games/XXXXXXXXXX/...) is the Place ID.
     Scripts = {
-        { name = "Tap Simulator",  url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/TapSimulator.lua", requiresKey = true },
-        { name = "Blade Ball",   url = "https://raw.githubusercontent.com/YOU/REPO/main/bladeball.lua",  requiresKey = true },
-        { name = "Universal Hub", url = "https://raw.githubusercontent.com/YOU/REPO/main/universal.lua", requiresKey = true },
-        { name = "Free Script",  url = "https://raw.githubusercontent.com/YOU/REPO/main/free.lua",       requiresKey = false },
+        { name = "Blox Fruits",   url = "https://raw.githubusercontent.com/YOU/REPO/main/bloxfruits.lua", requiresKey = true,  placeIds = { 2753915549, 4442272183, 7449423635 } },
+        { name = "Blade Ball",    url = "https://raw.githubusercontent.com/YOU/REPO/main/bladeball.lua",  requiresKey = true,  placeIds = { 13772394625 } },
+        { name = "Free Script",   url = "https://raw.githubusercontent.com/YOU/REPO/main/free.lua",       requiresKey = false, placeIds = { 123456789 } },
+        { name = "Universal Hub", url = "https://raw.githubusercontent.com/YOU/REPO/main/universal.lua", requiresKey = true,  universal = true },
     },
 
     -- Optional image shown at the top of the loader. Use YOUR OWN art.
@@ -196,6 +201,43 @@ local function startKeyWatch(key)
     end)
 end
 
+-- Find the script for the current game by Place ID (falls back to a universal script)
+local function detectScript()
+    local placeId = game.PlaceId
+    local universal
+    for _, s in ipairs(Config.Scripts) do
+        if s.universal then universal = universal or s end
+        if s.placeIds then
+            for _, id in ipairs(s.placeIds) do
+                if tonumber(id) == placeId then return s, false end
+            end
+        end
+    end
+    if universal then return universal, true end
+    return nil, false
+end
+
+--// FAST PATH: load instantly with no window when we already can =========
+do
+    local detected = detectScript()
+    if detected then
+        if not detected.requiresKey then
+            notify("ObsessionHub", "Loading " .. detected.name .. "...", 4)
+            loadScript(detected)
+            return
+        end
+        local saved = loadSavedKey()
+        if saved and saved ~= "" then
+            local ok = verifyKey(saved)
+            if ok then
+                notify("ObsessionHub", "Key verified — loading " .. detected.name, 4)
+                if loadScript(detected) then startKeyWatch(saved) end
+                return
+            end
+        end
+    end
+    -- otherwise fall through and open the window (needs a key, or game not supported)
+end
 
 --// UI =================================================================
 local parentGui = (gethui and gethui()) or CoreGui
@@ -230,7 +272,7 @@ local root = Instance.new("Frame")
 root.Name = "Root"
 root.AnchorPoint = Vector2.new(0.5, 0.5)
 root.Position = UDim2.fromScale(0.5, 0.5)
-root.Size = UDim2.fromOffset(400, 500)
+root.Size = UDim2.fromOffset(410, 552)
 root.BackgroundColor3 = T.bg
 root.BorderSizePixel = 0
 root.Parent = gui
@@ -313,24 +355,46 @@ header.Size = UDim2.new(1, 0, 0, 64)
 header.Position = UDim2.fromOffset(0, 6)
 header.Parent = root
 
+-- player avatar (with glowing ring)
+local avatarRing = Instance.new("Frame")
+avatarRing.Position = UDim2.fromOffset(18, 12)
+avatarRing.Size = UDim2.fromOffset(42, 42)
+avatarRing.BackgroundColor3 = T.panel
+avatarRing.BorderSizePixel = 0
+avatarRing.Parent = header
+corner(avatarRing, 99)
+local avatarStroke = strokeOf(avatarRing, T.red2, 1.5)
+local avatar = Instance.new("ImageLabel")
+avatar.AnchorPoint = Vector2.new(0.5, 0.5)
+avatar.Position = UDim2.fromScale(0.5, 0.5)
+avatar.Size = UDim2.fromOffset(38, 38)
+avatar.BackgroundTransparency = 1
+avatar.Parent = avatarRing
+corner(avatar, 99)
+pcall(function()
+    local uid = LocalPlayer and LocalPlayer.UserId or 1
+    local img = Players:GetUserThumbnailAsync(uid, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
+    avatar.Image = img
+end)
+
 local title = Instance.new("TextLabel")
 title.BackgroundTransparency = 1
-title.Position = UDim2.fromOffset(22, 14)
-title.Size = UDim2.new(1, -90, 0, 24)
+title.Position = UDim2.fromOffset(70, 13)
+title.Size = UDim2.new(1, -120, 0, 22)
 title.Font = Enum.Font.GothamBlack
 title.Text = "OBSESSION HUB"
-title.TextSize = 19
+title.TextSize = 18
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.TextColor3 = T.text
 title.Parent = header
-gradient(title, T.red2, Color3.fromRGB(255, 255, 255), 0)
+local titleGradAnim = gradient(title, T.red2, Color3.fromRGB(255, 255, 255), 0)
 
 local subtitle = Instance.new("TextLabel")
 subtitle.BackgroundTransparency = 1
-subtitle.Position = UDim2.fromOffset(22, 38)
-subtitle.Size = UDim2.new(1, -90, 0, 14)
-subtitle.Font = Enum.Font.Gotham
-subtitle.Text = "Script Loader"
+subtitle.Position = UDim2.fromOffset(70, 36)
+subtitle.Size = UDim2.new(1, -120, 0, 14)
+subtitle.Font = Enum.Font.GothamMedium
+subtitle.Text = "Welcome, " .. ((LocalPlayer and LocalPlayer.DisplayName) or "player")
 subtitle.TextSize = 11
 subtitle.TextXAlignment = Enum.TextXAlignment.Left
 subtitle.TextColor3 = T.muted
@@ -444,70 +508,93 @@ local function setChip(txt, col)
     chipStroke.Color = col
 end
 
--- ===== script list (scrolling, no overlap) =====
-sectionLabel("SELECT SCRIPT", 2)
+-- ===== auto-detect the game =====
+sectionLabel("DETECTED GAME", 2)
 
-local listHolder = Instance.new("ScrollingFrame")
-listHolder.LayoutOrder = 3
-listHolder.Size = UDim2.new(1, 0, 0, 150)
-listHolder.BackgroundColor3 = T.panel
-listHolder.BorderSizePixel = 0
-listHolder.ScrollBarThickness = 3
-listHolder.ScrollBarImageColor3 = T.red
-listHolder.CanvasSize = UDim2.new(0, 0, 0, 0)
-listHolder.AutomaticCanvasSize = Enum.AutomaticSize.Y
-listHolder.Parent = body
-corner(listHolder, 10)
-strokeOf(listHolder, T.stroke, 1)
-padAll(listHolder, 6)
-local listLayout = Instance.new("UIListLayout", listHolder)
-listLayout.Padding = UDim.new(0, 6)
-listLayout.SortOrder = Enum.SortOrder.LayoutOrder
-
-local rows = {}
 local keyBox -- fwd decl
 local loadBtn, loadLabel
 local function refreshUI() end -- fwd
 
-for i, entry in ipairs(Config.Scripts) do
-    local row = Instance.new("TextButton")
-    row.Size = UDim2.new(1, 0, 0, 40)
-    row.BackgroundColor3 = T.bg
-    row.Text = ""
-    row.AutoButtonColor = false
-    row.Parent = listHolder
-    corner(row, 8)
-    local rs = strokeOf(row, T.stroke, 1)
+-- try to get the game's name + icon (best effort)
+local gameName = "Game " .. tostring(game.PlaceId)
+local gameIcon
+pcall(function()
+    local info = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId)
+    if info then
+        if info.Name then gameName = info.Name end
+        if info.IconImageAssetId and info.IconImageAssetId ~= 0 then
+            gameIcon = "rbxassetid://" .. tostring(info.IconImageAssetId)
+        end
+    end
+end)
+local detected, isUniversal = detectScript()
+selected = detected
 
-    local nm = Instance.new("TextLabel")
-    nm.BackgroundTransparency = 1
-    nm.Position = UDim2.fromOffset(12, 0)
-    nm.Size = UDim2.new(1, -90, 1, 0)
-    nm.Font = Enum.Font.GothamMedium
-    nm.Text = entry.name
-    nm.TextSize = 14
-    nm.TextXAlignment = Enum.TextXAlignment.Left
-    nm.TextColor3 = T.text
-    nm.Parent = row
+-- detected-game card
+local card = Instance.new("Frame")
+card.LayoutOrder = 3
+card.Size = UDim2.new(1, 0, 0, 72)
+card.BackgroundColor3 = T.panel
+card.Parent = body
+corner(card, 12)
+local cardStroke = strokeOf(card, detected and T.red or T.stroke, detected and 1.6 or 1)
 
-    local tag = Instance.new("TextLabel")
-    tag.AnchorPoint = Vector2.new(1, 0.5)
-    tag.Position = UDim2.new(1, -12, 0.5, 0)
-    tag.Size = UDim2.fromOffset(54, 20)
-    tag.BackgroundColor3 = entry.requiresKey and Color3.fromRGB(45, 24, 32) or Color3.fromRGB(20, 45, 32)
-    tag.Font = Enum.Font.GothamBold
-    tag.Text = entry.requiresKey and "KEY" or "FREE"
-    tag.TextSize = 10
-    tag.TextColor3 = entry.requiresKey and T.red2 or T.good
-    tag.Parent = row
-    corner(tag, 6)
+-- game icon thumbnail
+local iconHolder = Instance.new("Frame")
+iconHolder.Position = UDim2.fromOffset(12, 12)
+iconHolder.Size = UDim2.fromOffset(48, 48)
+iconHolder.BackgroundColor3 = T.bg
+iconHolder.BorderSizePixel = 0
+iconHolder.ClipsDescendants = true
+iconHolder.Parent = card
+corner(iconHolder, 10)
+strokeOf(iconHolder, T.stroke, 1)
+local iconImg = Instance.new("ImageLabel")
+iconImg.BackgroundTransparency = 1
+iconImg.Size = UDim2.fromScale(1, 1)
+iconImg.ScaleType = Enum.ScaleType.Crop
+iconImg.Image = gameIcon or "rbxasset://textures/ui/GuiImagePlaceholder.png"
+iconImg.Parent = iconHolder
 
-    rows[i] = { row = row, stroke = rs, name = nm, entry = entry }
-    row.MouseButton1Click:Connect(function()
-        selected = entry
-        refreshUI()
-    end)
+local textX = 72
+local gameLbl = Instance.new("TextLabel")
+gameLbl.BackgroundTransparency = 1
+gameLbl.Position = UDim2.fromOffset(textX, 15)
+gameLbl.Size = UDim2.new(1, -textX - 34, 0, 20)
+gameLbl.Font = Enum.Font.GothamBold
+gameLbl.Text = gameName
+gameLbl.TextSize = 15
+gameLbl.TextTruncate = Enum.TextTruncate.AtEnd
+gameLbl.TextXAlignment = Enum.TextXAlignment.Left
+gameLbl.TextColor3 = T.text
+gameLbl.Parent = card
+
+local scriptLbl = Instance.new("TextLabel")
+scriptLbl.BackgroundTransparency = 1
+scriptLbl.Position = UDim2.fromOffset(textX, 38)
+scriptLbl.Size = UDim2.new(1, -textX - 34, 0, 18)
+scriptLbl.Font = Enum.Font.GothamMedium
+scriptLbl.TextSize = 12
+scriptLbl.TextTruncate = Enum.TextTruncate.AtEnd
+scriptLbl.TextXAlignment = Enum.TextXAlignment.Left
+scriptLbl.Parent = card
+if detected then
+    scriptLbl.Text = (isUniversal and "Universal → " or "") .. detected.name
+    scriptLbl.TextColor3 = T.good
+else
+    scriptLbl.Text = "No script for this game"
+    scriptLbl.TextColor3 = T.bad
 end
+
+-- little status dot on the card
+local cdot = Instance.new("Frame")
+cdot.AnchorPoint = Vector2.new(1, 0.5)
+cdot.Position = UDim2.new(1, -16, 0, 24)
+cdot.Size = UDim2.fromOffset(10, 10)
+cdot.BackgroundColor3 = detected and T.good or T.bad
+cdot.BorderSizePixel = 0
+cdot.Parent = card
+corner(cdot, 99)
 
 -- ===== key input (shown only when needed) =====
 local keyHolder = Instance.new("Frame")
@@ -532,49 +619,71 @@ padAll(keyBox, 14)
 keyBox.Focused:Connect(function() keyStroke.Color = T.red2 end)
 keyBox.FocusLost:Connect(function() keyStroke.Color = T.stroke end)
 
--- ===== link buttons =====
-local links = Instance.new("Frame")
-links.LayoutOrder = 5
-links.BackgroundTransparency = 1
-links.Size = UDim2.new(1, 0, 0, 32)
-links.Parent = body
-local linksLayout = Instance.new("UIListLayout", links)
-linksLayout.FillDirection = Enum.FillDirection.Horizontal
-linksLayout.Padding = UDim.new(0, 8)
+-- ===== prominent buttons: Buy Premium + Join Discord =====
+local prow = Instance.new("Frame")
+prow.LayoutOrder = 5
+prow.BackgroundTransparency = 1
+prow.Size = UDim2.new(1, 0, 0, 42)
+prow.Parent = body
+local prowLayout = Instance.new("UIListLayout", prow)
+prowLayout.FillDirection = Enum.FillDirection.Horizontal
+prowLayout.Padding = UDim.new(0, 8)
 
-local function pill(txt, col, cb)
-    local b = Instance.new("TextButton")
-    b.Size = UDim2.new(0, 0, 1, 0)
-    b.AutomaticSize = Enum.AutomaticSize.X
-    b.BackgroundColor3 = col
-    b.Text = txt
-    b.Font = Enum.Font.GothamBold
-    b.TextSize = 12
-    b.TextColor3 = T.text
-    b.Parent = links
-    corner(b, 8)
-    local p = Instance.new("UIPadding", b)
-    p.PaddingLeft = UDim.new(0, 16); p.PaddingRight = UDim.new(0, 16)
-    b.MouseButton1Click:Connect(cb)
-    return b
+local big = {}
+if Config.Premium and Config.Premium ~= "" then
+    big[#big + 1] = { "BUY PREMIUM", Color3.fromRGB(255, 196, 70), Color3.fromRGB(230, 140, 20), Color3.fromRGB(40, 24, 0), function()
+        setClip(Config.Premium); notify("ObsessionHub", "Premium link copied to clipboard", 5)
+    end }
 end
-pill("Get Key", T.red, function()
+if Config.Discord and Config.Discord ~= "" then
+    big[#big + 1] = { "JOIN DISCORD", Color3.fromRGB(100, 112, 255), Color3.fromRGB(60, 70, 200), Color3.fromRGB(255, 255, 255), function()
+        setClip(Config.Discord); notify("ObsessionHub", "Discord link copied", 4)
+    end }
+end
+do
+    local n = math.max(1, #big)
+    for _, b in ipairs(big) do
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1 / n, -(8 * (n - 1) / n), 1, 0)
+        btn.BackgroundColor3 = b[2]
+        btn.Text = b[1]
+        btn.Font = Enum.Font.GothamBlack
+        btn.TextSize = 13
+        btn.TextColor3 = b[4]
+        btn.AutoButtonColor = true
+        btn.Parent = prow
+        corner(btn, 10)
+        gradient(btn, b[2], b[3], 20)
+        local gl = Instance.new("UIStroke", btn)
+        gl.Color = b[2]; gl.Thickness = 1; gl.Transparency = 0.3
+        btn.MouseButton1Click:Connect(b[5])
+    end
+end
+
+-- ===== big GET KEY button =====
+local getKeyBtn = Instance.new("TextButton")
+getKeyBtn.LayoutOrder = 6
+getKeyBtn.Size = UDim2.new(1, 0, 0, 42)
+getKeyBtn.BackgroundColor3 = T.red
+getKeyBtn.Text = "GET KEY"
+getKeyBtn.Font = Enum.Font.GothamBlack
+getKeyBtn.TextSize = 13
+getKeyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+getKeyBtn.AutoButtonColor = true
+getKeyBtn.Parent = body
+corner(getKeyBtn, 10)
+gradient(getKeyBtn, T.red2, Color3.fromRGB(139, 10, 26), 20)
+do
+    local gkGlow = Instance.new("UIStroke", getKeyBtn)
+    gkGlow.Color = T.red2; gkGlow.Thickness = 1; gkGlow.Transparency = 0.3
+end
+getKeyBtn.MouseButton1Click:Connect(function()
     setClip(Config.GetKeyURL); notify("ObsessionHub", "Get-key link copied to clipboard", 5)
 end)
-if Config.Discord ~= "" then
-    pill("Discord", Color3.fromRGB(40, 22, 30), function()
-        setClip(Config.Discord); notify("ObsessionHub", "Discord link copied", 4)
-    end)
-end
-if Config.Youtube ~= "" then
-    pill("YouTube", Color3.fromRGB(40, 22, 30), function()
-        setClip(Config.Youtube); notify("ObsessionHub", "YouTube link copied", 4)
-    end)
-end
 
 -- ===== status + load button =====
 local status = Instance.new("TextLabel")
-status.LayoutOrder = 6
+status.LayoutOrder = 7
 status.BackgroundTransparency = 1
 status.Size = UDim2.new(1, 0, 0, 16)
 status.Font = Enum.Font.GothamMedium
@@ -586,11 +695,12 @@ status.Parent = body
 local function setStatus(t, c) status.Text = t; status.TextColor3 = c or T.muted end
 
 loadBtn = Instance.new("TextButton")
-loadBtn.LayoutOrder = 7
+loadBtn.LayoutOrder = 8
 loadBtn.Size = UDim2.new(1, 0, 0, 48)
 loadBtn.BackgroundColor3 = T.red
 loadBtn.Text = ""
 loadBtn.AutoButtonColor = true
+loadBtn.ClipsDescendants = true
 loadBtn.Parent = body
 corner(loadBtn, 12)
 gradient(loadBtn, T.red2, Color3.fromRGB(139, 10, 26), 25)
@@ -600,41 +710,59 @@ loadLabel.Size = UDim2.fromScale(1, 1)
 loadLabel.Font = Enum.Font.GothamBlack
 loadLabel.Text = "LOAD"
 loadLabel.TextSize = 15
+loadLabel.ZIndex = 3
 loadLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 loadLabel.Parent = loadBtn
+-- sweeping shine across the load button
+local shine = Instance.new("Frame")
+shine.Size = UDim2.new(0, 40, 2, 0)
+shine.Position = UDim2.fromScale(-0.3, -0.5)
+shine.Rotation = 18
+shine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+shine.BackgroundTransparency = 0.6
+shine.BorderSizePixel = 0
+shine.ZIndex = 2
+shine.Parent = loadBtn
+task.spawn(function()
+    while loadBtn.Parent do
+        shine.Position = UDim2.fromScale(-0.3, -0.5)
+        TweenService:Create(shine, TweenInfo.new(0.9, Enum.EasingStyle.Sine), { Position = UDim2.fromScale(1.3, -0.5) }):Play()
+        task.wait(2.6)
+    end
+end)
+
+-- footer
+local footer = Instance.new("TextLabel")
+footer.LayoutOrder = 9
+footer.BackgroundTransparency = 1
+footer.Size = UDim2.new(1, 0, 0, 14)
+footer.Font = Enum.Font.Gotham
+footer.Text = "ObsessionHub  •  v2.0"
+footer.TextSize = 10
+footer.TextColor3 = Color3.fromRGB(110, 90, 96)
+footer.Parent = body
 
 -- ===== UI refresh logic =====
+local busy = false
+local loaded = false
+
 function refreshUI()
-    for _, r in ipairs(rows) do
-        local on = (r.entry == selected)
-        r.stroke.Color = on and T.red2 or T.stroke
-        r.stroke.Thickness = on and 1.6 or 1
-        r.row.BackgroundColor3 = on and Color3.fromRGB(38, 16, 22) or T.bg
-        r.name.TextColor3 = on and T.text or Color3.fromRGB(200, 185, 190)
-    end
     local needsKey = selected and selected.requiresKey and not verified
     keyHolder.Visible = needsKey
+    keyHolder.Size = needsKey and UDim2.new(1, 0, 0, 44) or UDim2.new(1, 0, 0, 0)
     if not selected then
-        loadLabel.Text = "SELECT A SCRIPT"
-    elseif not selected.requiresKey then
-        loadLabel.Text = "LOAD " .. string.upper(selected.name)
-    elseif verified then
-        loadLabel.Text = "LOAD " .. string.upper(selected.name)
-    else
+        loadLabel.Text = "GAME NOT SUPPORTED"
+    elseif needsKey then
         loadLabel.Text = "VERIFY & LOAD"
+    else
+        loadLabel.Text = "LOAD " .. string.upper(selected.name)
     end
-end
-
-local function markVerified()
-    verified = true
-    if getgenv then getgenv().ObsessionVerified = true end
-    setChip("Key verified", T.good)
-    refreshUI()
 end
 
 -- ===== actions =====
-local busy = false
 local function doLoad(entry)
+    if loaded then return end
+    loaded = true
     setStatus("Loading " .. entry.name .. "...", T.muted)
     local ok = loadScript(entry)
     if ok then
@@ -643,23 +771,26 @@ local function doLoad(entry)
         if entry.requiresKey then startKeyWatch(currentKey) end
         if Config.CloseAfterLoad then task.wait(0.6); gui:Destroy() end
     else
+        loaded = false
         setStatus("Failed to load " .. entry.name, T.bad)
     end
 end
 
-loadBtn.MouseButton1Click:Connect(function()
-    if busy or not selected then return end
-    local entry = selected
+-- Verify (if needed) then load the detected script
+local function runLoad(fromAuto)
+    if busy or loaded or not selected then return end
 
     -- free script, or key already verified -> load straight away
-    if (not entry.requiresKey) or verified then
+    if (not selected.requiresKey) or verified then
         busy = true
-        doLoad(entry)
+        doLoad(selected)
         busy = false
         return
     end
 
-    -- needs a key and not verified yet -> verify once, remember it
+    -- needs a key and not verified. If auto-triggered, just wait for the user to type it.
+    if fromAuto then return end
+
     local key = keyBox.Text
     busy = true
     loadLabel.Text = "CHECKING..."
@@ -676,12 +807,31 @@ loadBtn.MouseButton1Click:Connect(function()
         end
         currentKey = tostring(key):gsub("%s+", ""):upper()
         saveKey(currentKey)
-        markVerified()
+        verified = true
+        if getgenv then getgenv().ObsessionVerified = true end
+        setChip("Key verified", T.good)
         setStatus("Key verified", T.good)
-        doLoad(entry)
         busy = false
+        doLoad(selected)   -- auto-load right after verifying
     end)
-end)
+end
+
+-- Auto-load as soon as we can (free game, or key already good)
+local function tryAutoLoad()
+    if not selected then return end
+    if selected.requiresKey and not verified then return end
+    runLoad(true)
+end
+
+local function markVerified()
+    verified = true
+    if getgenv then getgenv().ObsessionVerified = true end
+    setChip("Key verified", T.good)
+    refreshUI()
+    tryAutoLoad()
+end
+
+loadBtn.MouseButton1Click:Connect(function() runLoad(false) end)
 
 -- ===== drag =====
 do
@@ -703,7 +853,7 @@ end
 -- ===== entrance + glow loop =====
 root.Size = UDim2.fromOffset(400, 0)
 TweenService:Create(root, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-    { Size = UDim2.fromOffset(400, 500) }):Play()
+    { Size = UDim2.fromOffset(410, 552) }):Play()
 
 -- rotating glow border + shifting background sheen
 task.spawn(function()
@@ -742,33 +892,35 @@ task.spawn(function()
     end
 end)
 
--- hover feedback on script rows
-for _, r in ipairs(rows) do
-    r.row.MouseEnter:Connect(function()
-        if r.entry ~= selected then
-            TweenService:Create(r.row, TweenInfo.new(0.15), { BackgroundColor3 = Color3.fromRGB(28, 12, 17) }):Play()
-        end
-    end)
-    r.row.MouseLeave:Connect(function()
-        if r.entry ~= selected then
-            TweenService:Create(r.row, TweenInfo.new(0.15), { BackgroundColor3 = T.bg }):Play()
-        end
-    end)
-end
+-- Enter key in the key box = verify & load
+keyBox.FocusLost:Connect(function(enterPressed)
+    if enterPressed then runLoad(false) end
+end)
 
--- ===== startup: auto-verify a saved key so the user never re-enters it =====
+-- ===== startup: detect game, auto-verify saved key, auto-load =====
 refreshUI()
-if verified then
+if not selected then
+    setChip("Game not supported", T.bad)
+    setStatus("No script for this game", T.bad)
+elseif not selected.requiresKey then
+    setChip("Free script", T.good)
+    tryAutoLoad()                       -- free game: load immediately
+elseif verified then
     setChip("Key verified", T.good)
+    tryAutoLoad()                       -- already verified: load immediately
 elseif currentKey and currentKey ~= "" then
     setChip("Checking saved key...", T.muted)
     task.spawn(function()
         local ok = verifyKey(currentKey)
-        if ok then markVerified() setStatus("Saved key verified", T.good)
-        else setChip("Enter your key", T.muted) end
+        if ok then
+            setStatus("Saved key verified", T.good)
+            markVerified()              -- verified -> auto-loads
+        else
+            setChip("Enter your key", T.muted)
+        end
     end)
 else
-    setChip("No key yet", T.muted)
+    setChip("Enter your key", T.muted)  -- needs a key: wait for the user
 end
 
 notify("ObsessionHub", "Loader ready", 3)
