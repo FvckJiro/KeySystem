@@ -19,11 +19,11 @@
 
 --========================[ CONFIG — EDIT THIS ]========================--
 local Config = {
-    Website   = "https://your-site.vercel.app",      -- your key site (NO trailing slash)
-    GetKeyURL = "https://your-site.vercel.app/getkey", -- where users get a key
-    Discord   = "https://discord.gg/YOUR-INVITE",      -- "" to hide the button
-    Youtube   = "https://youtube.com/@YOUR-CHANNEL",    -- "" to hide the button
-    Premium   = "https://discord.gg/YOUR-INVITE",      -- Buy Premium link ("" to hide)
+    Website   = "https://keysystem-orcin-sigma.vercel.app",      -- your key site (NO trailing slash)
+    GetKeyURL = "https://keysystem-orcin-sigma.vercel.app/getkey", -- where users get a key
+    Discord   = "https://discord.gg/D8SM7VfTKZ",      -- "" to hide the button
+    Youtube   = "https://www.youtube.com/@jirombv",    -- "" to hide the button
+    Premium   = "https://discord.gg/D8SM7VfTKZ",      -- Buy Premium link ("" to hide)
 
     RememberKey = true,   -- save the key on this device so users don't retype it
     CloseAfterLoad = true, -- close the window after a script loads
@@ -41,7 +41,7 @@ local Config = {
     -- To find a Place ID: open the game's Roblox page, the number in the URL
     -- (roblox.com/games/XXXXXXXXXX/...) is the Place ID.
     Scripts = {
-        { name = "Blox Fruits",   url = "https://raw.githubusercontent.com/YOU/REPO/main/bloxfruits.lua", requiresKey = true,  placeIds = { 2753915549, 4442272183, 7449423635 } },
+        { name = "Tap Simulator",   url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/TapSimulator.lua", requiresKey = true,  placeIds = { 72858262610964, 10629695169, } },
         { name = "Blade Ball",    url = "https://raw.githubusercontent.com/YOU/REPO/main/bladeball.lua",  requiresKey = true,  placeIds = { 13772394625 } },
         { name = "Free Script",   url = "https://raw.githubusercontent.com/YOU/REPO/main/free.lua",       requiresKey = false, placeIds = { 123456789 } },
         { name = "Universal Hub", url = "https://raw.githubusercontent.com/YOU/REPO/main/universal.lua", requiresKey = true,  universal = true },
