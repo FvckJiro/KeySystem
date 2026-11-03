@@ -41,8 +41,8 @@ local Config = {
     -- To find a Place ID: open the game's Roblox page, the number in the URL
     -- (roblox.com/games/XXXXXXXXXX/...) is the Place ID.
     Scripts = {
-        { name = "Tap Simulator",   url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/TapSimulator.lua", requiresKey = true,  placeIds = { 72858262610964, 10629695169, } },
-        { name = "Blade Ball",    url = "https://raw.githubusercontent.com/YOU/REPO/main/bladeball.lua",  requiresKey = true,  placeIds = { 13772394625 } },
+        { name = "Tap Simulator",   url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/TapSimulator.lua", requiresKey = true,  placeIds = { 72858262610964, 10629695169 } },
+        { name = "Death Ball",    url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/BladeBall.lua",  requiresKey = true,  placeIds = { 5166944221, 15002061926 } },
         { name = "Free Script",   url = "https://raw.githubusercontent.com/YOU/REPO/main/free.lua",       requiresKey = false, placeIds = { 123456789 } },
         { name = "Universal Hub", url = "https://raw.githubusercontent.com/YOU/REPO/main/universal.lua", requiresKey = true,  universal = true },
     },
