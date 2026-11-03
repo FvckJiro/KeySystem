@@ -5,9 +5,23 @@ const { Redis } = require("@upstash/redis");
 const app = express();
 app.use(express.json({ limit: "10kb" }));
 
+// Find the Upstash Redis REST URL + token from the environment, no matter what
+// prefix Vercel's integration added (e.g. STORAGE_KV_REST_API_URL, etc.)
+function findEnv(nameTest, valTest) {
+  for (const [k, v] of Object.entries(process.env)) {
+    if (typeof v === "string" && v && nameTest(k) && (!valTest || valTest(v))) return v;
+  }
+}
+const REDIS_URL =
+  process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL ||
+  findEnv(k => /REST.*URL$/i.test(k), v => v.startsWith("https://"));
+const REDIS_TOKEN =
+  process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN ||
+  findEnv(k => /REST.*TOKEN$/i.test(k) && !/READ/i.test(k));
+
 const redis = new Redis({
-  url: process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL,
-  token: process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN,
+  url: REDIS_URL,
+  token: REDIS_TOKEN,
   automaticDeserialization: false,
 });
 
