@@ -87,8 +87,8 @@ const SCRIPTS = [
 const EXECUTORS = [
   { name: "Madium", platform: "Windows", price: "Free", status: "Working", description: "The #1 powerful scripting utility on the market.", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/madium.png", link: "https://getmadium.net/" },
   { name: "Real", platform: "Windows", price: "Free", status: "Working", description: "Official Real Executor website. Download the free Roblox Lua executor for Windows, run scripts fast, use ScriptHub, and join the verified Project Real community..", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/real.png", link: "https://projectreal.gg/" },
-  { name: "Delta", platform: "Android, iOS", price: "Free", status: "Working", description: "Delta Executor is the greatest, safest, and most popular Roblox Executor. Download the official Delta Executor.", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/delta.jpg", link: "https://spdmteam.com/index" },
-  { name: "Arceus Neo", platform: "Android, iOS", price: "Free", status: "Working", description: "Powerful Roblox executor with advanced features, fast updates, and a clean UI.", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/arceus.png", link: "https://deltaexploits.gg/delta-executor" },
+  { name: "Delta", platform: "Android, iOS", price: "Free", status: "Working", description: "Delta Executor is the greatest, safest, and most popular Roblox Executor. Download the official Delta Executor.", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/delta.jpg", link: "https://deltaexploits.gg/delta-executor" },
+  { name: "Arceus Neo", platform: "Android, iOS", price: "Free", status: "Working", description: "Powerful Roblox executor with advanced features, fast updates, and a clean UI.", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/arceus.png", link: "https://spdmteam.com/index" },
 ];
 
 // FAQ on the home page: [question, answer]
