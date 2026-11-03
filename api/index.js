@@ -74,7 +74,7 @@ const YOUTUBE_URL = "https://youtube.com/@YOUR-CHANNEL";      // your YouTube ch
 
 // Add your supported games here. status: "Supported", "Updating" or "Unsupported"
 const GAMES = [
-  // { name: "Loot To Forge", status: "Supported", description: "Short note", image: "https://... (thumbnail)", link: "https://www.roblox.com/games/118805555015549/1-Loot-To-Forge" },
+   { name: "Loot To Forge", status: "Supported", description: "Short note", image: "https://... (thumbnail)", link: "https://www.roblox.com/games/118805555015549/1-Loot-To-Forge" },
 ];
 
 // Add your scripts here. status: "Working", "Updating" or "Patched"
