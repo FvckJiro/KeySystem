@@ -33,11 +33,11 @@ const SITE_NAME = "ObsessionHub";             // shown at the top of every page
 // For Linkvertise: create the link with that target, then turn ON "Anti-Bypass" in the
 // Linkvertise dashboard for each link (that is Linkvertise's own server-side protection).
 const CHECKPOINTS = [
-  "https://direct-link.net/10011031/B72fEGbf5kYG",   // Checkpoint 1  -> target /checkpoint/1
-  "https://link-hub.net/10011031/Cmbzeav4ae57",   // Checkpoint 2  -> target /checkpoint/2
-  "https://direct-link.net/10011031/hyRI1in6PVqp",   // Checkpoint 3  -> target /checkpoint/3
-  "https://direct-link.net/10011031/5hrHrbmgQA3Y",   // Checkpoint 4  -> target /checkpoint/4
-  "https://link-hub.net/10011031/ur61jQ6nbTzR",   // Checkpoint 5  -> target /checkpoint/5
+  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-1",   // Checkpoint 1  -> target /checkpoint/1
+  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-2",   // Checkpoint 2  -> target /checkpoint/2
+  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-3",   // Checkpoint 3  -> target /checkpoint/3
+  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-4",   // Checkpoint 4  -> target /checkpoint/4
+  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-5",   // Checkpoint 5  -> target /checkpoint/5
 ];
 const MIN_SECONDS_PER_CHECKPOINT = 10;        // finishing faster than this = bypass
 const REQUIRE_REFERER = true;                 // require coming back from an allowed ad site (below)
@@ -71,13 +71,28 @@ const TAGLINE = "Get your key, pick your script, and start playing. Keys last 5 
 const LOGO_URL = "";     // optional: link to your own logo image (https://...)
 // Optional: show ONE image on the Games page instead of the game tiles.
 // Paste a link to your own hosted image (upload it, copy the direct link). "" = show the normal tiles.
-const GAMES_BANNER = "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/suppoted.png";
-const DISCORD_URL = "https://discord.gg/D8SM7VfTKZ";        // your Discord invite ("" to hide)
-const YOUTUBE_URL = "https://www.youtube.com/@jirombv";      // your YouTube channel ("" to hide)
+const GAMES_BANNER = "";
+const DISCORD_URL = "https://discord.gg/YOUR-INVITE";        // your Discord invite ("" to hide)
+const YOUTUBE_URL = "https://youtube.com/@YOUR-CHANNEL";      // your YouTube channel ("" to hide)
 
 // Add your supported games here. status: "Supported", "Updating" or "Unsupported"
+// Games checklist. Just write the game name to show a check.
+// For a game that isn't ready, write { name: "X", soon: true } to show COMING SOON.
 const GAMES = [
-  // { name: "Game Name", status: "Supported", description: "Short note", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/suppoted.png", link: "https://www.roblox.com/games/..." },
+  "AnimeDice",
+  "DeathBall",
+  "BreakAndSteal",
+  "DeepFishing",
+  "LootToForge",
+  "ProjectDelta",
+  "StealAnEgg",
+  "RideAPet",
+  "StrafeFps",
+  "TapSimulator",
+  "GunForge",
+  "Vabrant Survival",
+  { name: "Bloxfruit", soon: true },
+  { name: "Slayer2", soon: true },
 ];
 
 // Add your scripts here. status: "Working", "Updating" or "Patched"
@@ -88,10 +103,10 @@ const SCRIPTS = [
 // Add your executors here. status: "Working", "Updating" or "Down"
 // platform decides the section: "Android"/"iOS"/"Mobile" -> Mobile Executors, anything else -> PC Executors
 const EXECUTORS = [
-  { name: "Madium", platform: "Windows", price: "Free", status: "Working", description: "The #1 powerful scripting utility on the market.", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/madium.png", link: "https://getmadium.net/" },
-  { name: "Real", platform: "Windows", price: "Free", status: "Working", description: "Official Real Executor website. Download the free Roblox Lua executor for Windows, run scripts fast, use ScriptHub, and join the verified Project Real community..", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/real.png", link: "https://projectreal.gg/" },
-  { name: "Delta", platform: "Android, iOS", price: "Free", status: "Working", description: "Delta Executor is the greatest, safest, and most popular Roblox Executor. Download the official Delta Executor.", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/delta.jpg", link: "https://deltaexploits.gg/delta-executor" },
-  { name: "Arceus Neo", platform: "Android, iOS", price: "Free", status: "Working", description: "Powerful Roblox executor with advanced features, fast updates, and a clean UI.", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/arceus.png", link: "https://spdmteam.com/index" },
+  { name: "Swift", platform: "Windows", price: "Free", status: "Working", description: "Fast and stable PC executor. Low detection, supports most scripts.", image: "https://picsum.photos/seed/swift/400/200", link: "https://your-download-link.com/swift" },
+  { name: "Wave", platform: "Windows", price: "Paid", status: "Working", description: "Premium Windows executor with fast updates and strong script support.", image: "https://picsum.photos/seed/wave/400/200", link: "https://your-download-link.com/wave" },
+  { name: "Delta", platform: "Android", price: "Free", status: "Working", description: "Popular free mobile executor for Android. Easy setup.", image: "https://picsum.photos/seed/delta/400/200", link: "https://your-download-link.com/delta" },
+  { name: "Codex", platform: "iOS", price: "Free", status: "Working", description: "Free iOS executor for iPhone and iPad. No jailbreak needed.", image: "https://picsum.photos/seed/codex/400/200", link: "https://your-download-link.com/codex" },
 ];
 
 // FAQ on the home page: [question, answer]
@@ -665,6 +680,20 @@ nav .links a.nav-cta{color:#fff;background:linear-gradient(135deg,var(--red),var
 .seg{border:0;background:transparent;color:var(--muted);font-weight:700;font-size:.9rem;padding:9px 22px;border-radius:9px;cursor:pointer;transition:all .2s}
 .seg.on{color:#fff;background:linear-gradient(135deg,var(--red),var(--deep));box-shadow:0 4px 14px rgba(195,20,45,.4)}
 .seg:hover:not(.on){color:var(--text);background:rgba(255,59,78,.08)}
+/* ---- games checklist ---- */
+.glist{max-width:920px;margin:14px auto 0;padding:22px;border-radius:20px;display:grid;grid-template-columns:1fr 1fr;gap:10px 18px;
+  background:rgba(14,6,9,.72);box-shadow:0 0 0 1px rgba(255,59,78,.3),0 24px 64px rgba(0,0,0,.55),inset 0 0 70px rgba(224,31,58,.06)}
+.grow{display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:11px;text-decoration:none;
+  background:linear-gradient(90deg,rgba(44,10,18,.75),rgba(18,8,12,.45));box-shadow:inset 0 0 0 1px rgba(255,59,78,.22);transition:transform .15s,box-shadow .2s}
+a.grow:hover{transform:translateX(3px);box-shadow:inset 0 0 0 1px rgba(255,59,78,.6),0 0 20px rgba(224,31,58,.2)}
+.grow .ck{width:26px;height:26px;flex:none;border-radius:7px;display:grid;place-items:center;font-weight:800}
+.grow.ok .ck{color:var(--red2);box-shadow:inset 0 0 0 2px rgba(255,59,78,.5)}
+.grow.ok .ck svg{width:16px;height:16px}
+.grow.soon{opacity:.8}
+.grow.soon .ck{color:var(--muted);box-shadow:inset 0 0 0 2px rgba(150,124,131,.4)}
+.grow .nm{font-weight:700;font-size:1.02rem;color:#fff}
+.grow .soonbadge{margin-left:auto;font-size:.66rem;font-weight:800;letter-spacing:.12em;color:#ff6b7a;padding:6px 13px;border-radius:7px;box-shadow:inset 0 0 0 1.5px rgba(255,59,78,.55)}
+@media(max-width:620px){.glist{grid-template-columns:1fr;padding:16px}}
 .more{display:inline-block;margin-top:18px;font-weight:600;text-decoration:none}
 .more:hover{text-decoration:underline}
 .sec-top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
@@ -970,18 +999,35 @@ const isMobileExec = e => /android|ios|iphone|ipad|mobile|phone|arm/i.test(((e.p
 function listPage(kind) {
   const L = LISTS[kind], items = L.items();
 
-  // Games page: show ONLY a single banner image, if one is set
+  // Games page: show ONLY a single banner image, centered, if one is set
   if (kind === "games" && safeUrl(GAMES_BANNER)) {
     return siteShell(L.title, "games", `
-      <section style="padding:40px 0 24px;text-align:center">
+      <section style="padding:48px 0 36px;display:flex;justify-content:center">
         <img src="${esc(GAMES_BANNER)}" alt="Supported games"
-          style="width:100%;max-width:1000px;height:auto;border-radius:16px;
-                 box-shadow:0 20px 60px rgba(0,0,0,.5),0 0 0 1px var(--line),0 0 50px rgba(224,31,58,.2)">
+          style="width:100%;max-width:1240px;height:auto;border-radius:18px;
+                 box-shadow:0 24px 70px rgba(0,0,0,.55),0 0 0 1px var(--line),0 0 60px rgba(224,31,58,.22)">
       </section>`);
   }
 
   let body;
-  if (kind === "executors") {
+  if (kind === "games") {
+    // checklist design: ✓ for supported, "COMING SOON" for the rest.
+    // Entries can be a plain name string, or { name, soon?, link? }.
+    const rows = items.map(it => {
+      const g = typeof it === "string" ? { name: it } : it;
+      const soon = g.soon === true || /soon|unsupported|unsupport|wip/i.test(g.status || "");
+      const inner = `
+        <span class="ck">${soon ? "–" : ICONS.check}</span>
+        <span class="nm">${esc(g.name)}</span>
+        ${soon ? `<span class="soonbadge">COMING SOON</span>` : ""}`;
+      return safeUrl(g.link) && !soon
+        ? `<a class="grow ok" data-q="${searchText(g.name)}" href="${esc(g.link)}" target="_blank" rel="noopener">${inner}</a>`
+        : `<div class="grow ${soon ? "soon" : "ok"}" data-q="${searchText(g.name)}">${inner}</div>`;
+    }).join("");
+    body = items.length
+      ? `<div class="glist">${rows}</div>`
+      : `<div class="tiles">${emptyTiles(L.empty, L.emptyCount)}</div>`;
+  } else if (kind === "executors") {
     const pc = items.filter(e => !isMobileExec(e));
     const mob = items.filter(isMobileExec);
     const group = (heading, arr, g) => `
@@ -1032,7 +1078,7 @@ function listPage(kind) {
     }
     // search
     var q = document.getElementById("q"); if (!q) return;
-    var tiles = document.querySelectorAll("#listwrap .tile"), none = document.getElementById("none");
+    var tiles = document.querySelectorAll("#listwrap [data-q]"), none = document.getElementById("none");
     q.addEventListener("input", function(){
       var v = q.value.trim().toLowerCase(), shown = 0;
       tiles.forEach(function(t){ var hit = !v || (t.dataset.q || "").indexOf(v) !== -1; t.style.display = hit ? "" : "none"; if (hit) shown++; });
