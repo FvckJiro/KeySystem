@@ -1227,7 +1227,11 @@ function getCookie(req, name) {
 const cookieHeader = sid => `ks_sid=${sid}; Path=/; Max-Age=${SESSION_TTL_SECONDS}; HttpOnly; Secure; SameSite=Lax`;
 
 async function getSession(req) {
-  const sid = getCookie(req, "ks_sid");
+  // Cookie first; fall back to the session id carried in the URL (?s=). Some mobile/in-app
+  // browsers drop our cookie between page loads, which was resetting progress to Checkpoint 1.
+  // Carrying the sid in our own internal links keeps the session alive even with no cookie.
+  let sid = getCookie(req, "ks_sid");
+  if (!SID_RE.test(sid) && req.query) sid = str(req.query.s);
   if (!SID_RE.test(sid)) return null;
   const s = await redis.hgetall("session:" + sid);
   if (!s) return null;
@@ -1352,6 +1356,8 @@ app.get("/getkey", wrap(async (req, res) => {
   }
 
   const s = (await getSession(req)) || (await newSession(req, res));
+  // Re-anchor the cookie on every load (also covers sessions resumed via ?s= when the cookie was dropped).
+  res.setHeader("Set-Cookie", cookieHeader(s.sid));
   const justDone = parseInt(req.query.done, 10);
   const celebrate = justDone >= 1 && justDone <= s.step;
   const retried = req.query.retry === "1";
@@ -1427,7 +1433,7 @@ app.get("/getkey", wrap(async (req, res) => {
     <h1>Checkpoint ${next}</h1>
     <p class="muted" style="margin:-2px 0 0">${s.step} of ${total} complete · ${pct}%</p>
     ${ring(s.step, total, `<b>${s.step}/${total}</b><small>COMPLETE</small>`)}
-    <a class="btn go wait" id="go" href="/go/${next}" data-label="Start Checkpoint ${next} →" data-celeb="${celebrate ? 1 : 0}"><span>Preparing checkpoint...</span></a>
+    <a class="btn go wait" id="go" href="/go/${next}?s=${s.sid}" data-label="Start Checkpoint ${next} →" data-celeb="${celebrate ? 1 : 0}"><span>Preparing checkpoint...</span></a>
     <p class="muted" style="font-size:.8rem;margin-top:12px">Finish the page that opens and you'll come back here automatically.<br>Bypassers are detected and reset your progress.</p>
     <div class="warp" id="warp"><div class="spin"></div><b>Entering Checkpoint ${next}</b><small>Hold tight...</small></div>
     ${celebrate ? toast(`Checkpoint ${justDone} complete!`) : retried ? toast(`Let's try Checkpoint ${next} again`) : ""}
@@ -1458,6 +1464,8 @@ app.get("/go/:n", wrap(async (req, res) => {
   const s = await getSession(req);
   if (!s || n !== s.step + 1 || !CHECKPOINTS[n - 1]) return res.redirect("/getkey");
   await redis.hset("session:" + s.sid, { startedAt: Date.now(), pending: 0, challenge: "", chAt: 0 });
+  // Don't leak the session id (?s=) to the ad network in the Referer header.
+  res.setHeader("Referrer-Policy", "no-referrer");
   res.redirect(CHECKPOINTS[n - 1]);
 }));
 
@@ -1665,11 +1673,13 @@ app.post("/checkpoint/verify", wrap(async (req, res) => {
   // Re-anchor the cookie to this session so the next checkpoint's Get Key page tracks it, even if
   // the ad round-trip landed the verify POST in a different cookie context.
   res.setHeader("Set-Cookie", cookieHeader(sid));
-  res.json({ ok: true, next: "/getkey?done=" + n });
+  // Carry the sid in the URL too, so the next Get Key load keeps the session even if the
+  // browser dropped our cookie (the cause of progress resetting to Checkpoint 1).
+  res.json({ ok: true, next: "/getkey?done=" + n + "&s=" + sid });
 }));
 
 // Build marker so you can confirm which version Vercel is actually running.
-app.get("/version", (req, res) => res.json({ build: "cp-cookie-v4", checkpoints: CHECKPOINTS.length }));
+app.get("/version", (req, res) => res.json({ build: "cp-urlsession-v5", checkpoints: CHECKPOINTS.length }));
 
 // Old link still works
 app.get("/generate-key", (req, res) => res.redirect("/getkey"));
