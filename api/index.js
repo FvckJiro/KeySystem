@@ -33,11 +33,11 @@ const SITE_NAME = "ObsessionHub";             // shown at the top of every page
 // For Linkvertise: create the link with that target, then turn ON "Anti-Bypass" in the
 // Linkvertise dashboard for each link (that is Linkvertise's own server-side protection).
 const CHECKPOINTS = [
-  "https://direct-link.net/10011031/B72fEGbf5kYG",   // Checkpoint 1  -> target /checkpoint/1
-  "https://link-hub.net/10011031/Cmbzeav4ae57",   // Checkpoint 2  -> target /checkpoint/2
-  "https://direct-link.net/10011031/hyRI1in6PVqp",   // Checkpoint 3  -> target /checkpoint/3
-  "https://direct-link.net/10011031/5hrHrbmgQA3Y",   // Checkpoint 4  -> target /checkpoint/4
-  "https://link-hub.net/10011031/ur61jQ6nbTzR",   // Checkpoint 5  -> target /checkpoint/5
+  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-1",   // Checkpoint 1  -> target /checkpoint/1
+  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-2",   // Checkpoint 2  -> target /checkpoint/2
+  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-3",   // Checkpoint 3  -> target /checkpoint/3
+  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-4",   // Checkpoint 4  -> target /checkpoint/4
+  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-5",   // Checkpoint 5  -> target /checkpoint/5
 ];
 const MIN_SECONDS_PER_CHECKPOINT = 10;        // finishing faster than this = bypass
 const REQUIRE_REFERER = true;                 // require coming back from an allowed ad site (below)
@@ -74,7 +74,7 @@ const YOUTUBE_URL = "https://youtube.com/@YOUR-CHANNEL";      // your YouTube ch
 
 // Add your supported games here. status: "Supported", "Updating" or "Unsupported"
 const GAMES = [
-   { name: "Loot To Forge", status: "Supported", description: "Short note", image: "https://... (thumbnail)", link: "https://www.roblox.com/games/118805555015549/1-Loot-To-Forge" },
+  // { name: "Game Name", status: "Supported", description: "Short note", image: "https://... (thumbnail)", link: "https://www.roblox.com/games/..." },
 ];
 
 // Add your scripts here. status: "Working", "Updating" or "Patched"
@@ -83,8 +83,10 @@ const SCRIPTS = [
 ];
 
 // Add your executors here. status: "Working", "Updating" or "Down"
+// platform decides the section: "Android"/"iOS"/"Mobile" -> Mobile Executors, anything else -> PC Executors
 const EXECUTORS = [
-  // { name: "Executor Name", platform: "Windows", price: "Free", status: "Working", link: "https://..." },
+  // { name: "Swift", platform: "Windows", price: "Free", status: "Working", link: "https://..." },
+  // { name: "Delta", platform: "Android", price: "Free", status: "Working", link: "https://..." },
 ];
 
 // FAQ on the home page: [question, answer]
@@ -430,6 +432,8 @@ section{padding:48px 0}
 .tile.empty{display:grid;place-items:center;min-height:160px;text-align:center;color:var(--muted);font-size:.9rem;
   background:rgba(22,7,11,.4);box-shadow:none;border:1px dashed rgba(255,59,78,.3)}
 .tile.empty b{display:block;font-size:1.8rem;color:var(--red2);opacity:.7}
+.tiles:has(.tile.empty:only-child){display:flex;justify-content:center}
+.tiles .tile.empty{width:min(340px,100%)}
 .steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
 .num{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;font-weight:800;margin-bottom:12px;
   background:linear-gradient(135deg,var(--red),var(--deep));box-shadow:0 6px 18px rgba(195,20,45,.4)}
@@ -470,6 +474,20 @@ footer a{margin:0 8px}
 .band input{margin:0}
 .band button{margin:0;white-space:nowrap}
 @media(max-width:480px){.band form{flex-direction:column}}
+/* ---- mobile layout ---- */
+@media(max-width:600px){
+  .wrap{padding:0 14px}
+  .tiles,.features,.steps{grid-template-columns:1fr}
+  .tiles:has(.tile.empty:only-child) .tile.empty{width:100%}
+  .page-head{padding:44px 0 22px}
+  .page-head h1{font-size:clamp(1.9rem,9vw,2.6rem)}
+  .hero{padding:56px 0 40px}
+  .sec-top{flex-direction:column;align-items:flex-start;gap:6px}
+  .stats{gap:8px}
+  .stat{min-width:0;flex:1;padding:12px 10px}
+  .stat b{font-size:1.3rem}
+  .thumb{height:160px}
+}
 
 .faq details{border-radius:14px;background:var(--card);box-shadow:0 0 0 1px var(--line);margin-bottom:10px;overflow:hidden}
 .faq summary{cursor:pointer;list-style:none;padding:16px 18px;font-weight:600;display:flex;justify-content:space-between;align-items:center;gap:12px}
@@ -638,6 +656,10 @@ nav .links a.nav-cta{color:#fff;background:linear-gradient(135deg,var(--red),var
 .search svg{position:absolute;left:14px;top:50%;width:18px;height:18px;transform:translateY(-50%);color:var(--muted)}
 .search input{margin:0;padding-left:42px}
 .noresults{display:none;text-align:center;color:var(--muted);padding:30px 0}
+.segtabs{display:inline-flex;gap:4px;padding:4px;border-radius:12px;background:var(--card);box-shadow:inset 0 0 0 1px var(--line)}
+.seg{border:0;background:transparent;color:var(--muted);font-weight:700;font-size:.9rem;padding:9px 22px;border-radius:9px;cursor:pointer;transition:all .2s}
+.seg.on{color:#fff;background:linear-gradient(135deg,var(--red),var(--deep));box-shadow:0 4px 14px rgba(195,20,45,.4)}
+.seg:hover:not(.on){color:var(--text);background:rgba(255,59,78,.08)}
 .more{display:inline-block;margin-top:18px;font-weight:600;text-decoration:none}
 .more:hover{text-decoration:underline}
 .sec-top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
@@ -646,6 +668,10 @@ nav .links a.nav-cta{color:#fff;background:linear-gradient(135deg,var(--red),var
 .thumb img{width:100%;height:100%;object-fit:cover;transition:transform .5s}
 .tile:hover .thumb img{transform:scale(1.07)}
 .thumb svg{width:46px;height:46px}
+.exlogo{width:56px;height:56px;border-radius:14px;display:grid;place-items:center;overflow:hidden;margin-bottom:14px;color:var(--red2);
+  background:linear-gradient(135deg,rgba(139,10,26,.5),rgba(76,29,149,.4));box-shadow:inset 0 0 0 1px rgba(255,59,78,.25)}
+.exlogo img{width:100%;height:100%;object-fit:cover}
+.exlogo svg{width:28px;height:28px}
 .foot-soc{display:flex;justify-content:center;gap:8px;margin:14px 0}
 `;
 
@@ -840,8 +866,9 @@ const head = title => `<!DOCTYPE html>
 <style>${CSS}${HOME_CSS}${SIDE_CSS}</style></head>`;
 
 // ===== SITE PAGES (home, games, scripts, executors) =====
-const emptyTiles = label => [0, 1, 2].map(i =>
-  `<div class="tile empty reveal" style="transition-delay:${i * 80}ms"><div><b>+</b>${label}</div></div>`).join("");
+const emptyTiles = (label, count = 1) =>
+  Array.from({ length: Math.max(1, count) }, (_, i) =>
+    `<div class="tile empty reveal" style="transition-delay:${i * 80}ms"><div><b>+</b>${label}</div></div>`).join("");
 
 const searchText = (...parts) => esc(parts.filter(Boolean).join(" ").toLowerCase());
 
@@ -856,6 +883,7 @@ const gameTile = (g, i) => `
 
 const scriptTile = (s, i) => `
   <div class="tile reveal" data-q="${searchText(s.name, s.game, s.description, s.status)}" style="transition-delay:${(i % 6) * 70}ms">
+    ${safeUrl(s.image) ? `<div class="thumb"><img src="${esc(s.image)}" alt="" loading="lazy"></div>` : ""}
     <div class="tags">
       ${s.status ? `<span class="status ${statusClass(s.status)}">${esc(s.status)}</span>` : ""}
       ${s.game ? `<span class="tag">${esc(s.game)}</span>` : ""}
@@ -867,20 +895,21 @@ const scriptTile = (s, i) => `
 
 const executorTile = (e, i) => `
   <div class="tile reveal" data-q="${searchText(e.name, e.platform, e.price, e.status)}" style="transition-delay:${(i % 6) * 70}ms">
+    <div class="thumb">${safeUrl(e.image) ? `<img src="${esc(e.image)}" alt="" loading="lazy">` : ICONS.bolt}</div>
     <div class="tags">
       ${e.status ? `<span class="status ${statusClass(e.status)}">${esc(e.status)}</span>` : ""}
       ${e.platform ? `<span class="tag">${esc(e.platform)}</span>` : ""}
       ${e.price ? `<span class="tag">${esc(e.price)}</span>` : ""}
     </div>
     <h4>${esc(e.name)}</h4>
-    ${e.description ? `<p>${esc(e.description)}</p>` : ""}
+    <p>${e.description ? esc(e.description) : "No description yet."}</p>
     ${safeUrl(e.link) ? `<a class="btn" href="${esc(e.link)}" target="_blank" rel="noopener">Download</a>` : ""}
   </div>`;
 
 const LISTS = {
   games: { title: "Supported Games", nav: "Games", sub: "Every game our scripts support.", items: () => GAMES, tile: gameTile, empty: "Game coming soon", icon: "game" },
   scripts: { title: "Scripts", nav: "Scripts", sub: "All our scripts and their current status.", items: () => SCRIPTS, tile: scriptTile, empty: "Script coming soon", icon: "code" },
-  executors: { title: "Executors", nav: "Executors", sub: "Executors that work with our scripts.", items: () => EXECUTORS, tile: executorTile, empty: "Executor coming soon", icon: "bolt" },
+  executors: { title: "Executors", nav: "Executors", sub: "Executors that work with our scripts.", items: () => EXECUTORS, tile: executorTile, empty: "Executor coming soon", icon: "bolt", emptyCount: 3 },
 };
 
 function siteNav(active) {
@@ -930,9 +959,33 @@ ${siteFooter()}
 ${REVEAL_JS}${extraJs}
 </body></html>`);
 
+// An executor counts as "mobile" when its platform/name mentions a mobile OS
+const isMobileExec = e => /android|ios|iphone|ipad|mobile|phone|arm/i.test(((e.platform || "") + " " + (e.name || "")));
+
 function listPage(kind) {
   const L = LISTS[kind], items = L.items();
-  const tiles = items.length ? items.map(L.tile).join("") : emptyTiles(L.empty);
+  let body;
+  if (kind === "executors") {
+    const pc = items.filter(e => !isMobileExec(e));
+    const mob = items.filter(isMobileExec);
+    const group = (heading, arr, g) => `
+      <div class="exgroup" data-group="${g}">
+        <div class="sec-head reveal" style="margin:22px 0 14px"><h2>${heading}</h2></div>
+        <div class="tiles">${arr.length ? arr.map(L.tile).join("") : emptyTiles(L.empty, 1)}</div>
+      </div>`;
+    body = `
+      <div style="text-align:center;margin-bottom:6px">
+        <div class="segtabs" id="segtabs">
+          <button class="seg on" data-f="all">All</button>
+          <button class="seg" data-f="pc">PC</button>
+          <button class="seg" data-f="mobile">Mobile</button>
+        </div>
+      </div>
+      ${group("PC Executors", pc, "pc")}
+      ${group("Mobile Executors", mob, "mobile")}`;
+  } else {
+    body = `<div class="tiles">${items.length ? items.map(L.tile).join("") : emptyTiles(L.empty, L.emptyCount)}</div>`;
+  }
   return siteShell(L.title, kind, `
   <header class="page-head">
     <div class="emblem">${ICONS[L.icon]}</div>
@@ -941,14 +994,29 @@ function listPage(kind) {
     <p>${L.sub}</p>
     ${items.length ? `<div class="search">${ICONS.search}<input id="q" placeholder="Search ${L.nav.toLowerCase()}..." autocomplete="off"></div>` : ""}
   </header>
-  <section style="padding-top:10px">
-    <div class="tiles" id="list">${tiles}</div>
+  <section id="listwrap" style="padding-top:10px">
+    ${body}
     <p class="noresults" id="none">Nothing matches your search.</p>
   </section>`, `
 <script>
   (function(){
+    // PC / Mobile filter tabs (executors page)
+    var segs = document.querySelectorAll("#segtabs .seg");
+    if (segs.length) {
+      segs.forEach(function(s){
+        s.onclick = function(){
+          segs.forEach(function(x){ x.classList.remove("on"); });
+          s.classList.add("on");
+          var f = s.dataset.f;
+          document.querySelectorAll(".exgroup").forEach(function(g){
+            g.style.display = (f === "all" || g.dataset.group === f) ? "" : "none";
+          });
+        };
+      });
+    }
+    // search
     var q = document.getElementById("q"); if (!q) return;
-    var tiles = document.querySelectorAll("#list .tile"), none = document.getElementById("none");
+    var tiles = document.querySelectorAll("#listwrap .tile"), none = document.getElementById("none");
     q.addEventListener("input", function(){
       var v = q.value.trim().toLowerCase(), shown = 0;
       tiles.forEach(function(t){ var hit = !v || (t.dataset.q || "").indexOf(v) !== -1; t.style.display = hit ? "" : "none"; if (hit) shown++; });
@@ -973,7 +1041,7 @@ function homePage() {
       <div class="sec-head reveal" style="margin:0"><h2>${L.title}</h2><p>${L.sub}</p></div>
       ${items.length > 3 ? `<a class="more reveal" href="/${kind}">View all ${items.length} →</a>` : ""}
     </div>
-    <div class="tiles" style="margin-top:22px">${items.length ? items.slice(0, 3).map(L.tile).join("") : emptyTiles(L.empty)}</div>
+    <div class="tiles" style="margin-top:22px">${items.length ? items.slice(0, 3).map(L.tile).join("") : emptyTiles(L.empty, L.emptyCount)}</div>
     ${items.length && items.length <= 3 ? `<a class="more reveal" href="/${kind}">Open ${L.nav} page →</a>` : ""}
   </section>`;
   };
