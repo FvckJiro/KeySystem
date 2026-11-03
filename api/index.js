@@ -85,10 +85,10 @@ const SCRIPTS = [
 // Add your executors here. status: "Working", "Updating" or "Down"
 // platform decides the section: "Android"/"iOS"/"Mobile" -> Mobile Executors, anything else -> PC Executors
 const EXECUTORS = [
-  { name: "Madium", platform: "Windows", price: "Free", status: "Working", description: "test.", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/madium.png", link: "https://your-download-link.com/swift" },
-  { name: "Wave", platform: "Windows", price: "Paid", status: "Working", description: "Premium Windows executor with fast updates and strong script support.", image: "https://picsum.photos/seed/wave/400/200", link: "https://your-download-link.com/wave" },
-  { name: "Delta", platform: "Android", price: "Free", status: "Working", description: "Popular free mobile executor for Android. Easy setup.", image: "https://picsum.photos/seed/delta/400/200", link: "https://your-download-link.com/delta" },
-  { name: "Codex", platform: "iOS", price: "Free", status: "Working", description: "Free iOS executor for iPhone and iPad. No jailbreak needed.", image: "https://picsum.photos/seed/codex/400/200", link: "https://your-download-link.com/codex" },
+  { name: "Madium", platform: "Windows", price: "Free", status: "Working", description: "The #1 powerful scripting utility on the market.", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/madium.png", link: "https://getmadium.net/" },
+  { name: "Real", platform: "Windows", price: "Free", status: "Working", description: "Official Real Executor website. Download the free Roblox Lua executor for Windows, run scripts fast, use ScriptHub, and join the verified Project Real community..", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/real.png", link: "https://projectreal.gg/" },
+  { name: "Delta", platform: "Android, iOS", price: "Free", status: "Working", description: "Delta Executor is the greatest, safest, and most popular Roblox Executor. Download the official Delta Executor.", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/delta.jpg", link: "https://spdmteam.com/index" },
+  { name: "Arceus Neo", platform: "Android, iOS", price: "Free", status: "Working", description: "Powerful Roblox executor with advanced features, fast updates, and a clean UI.", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/arceus.png", link: "https://deltaexploits.gg/delta-executor" },
 ];
 
 // FAQ on the home page: [question, answer]
