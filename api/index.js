@@ -33,11 +33,9 @@ const SITE_NAME = "ObsessionHub";             // shown at the top of every page
 // For Linkvertise: create the link with that target, then turn ON "Anti-Bypass" in the
 // Linkvertise dashboard for each link (that is Linkvertise's own server-side protection).
 const CHECKPOINTS = [
-  "https://direct-link.net/10011031/B72fEGbf5kYG",   // Checkpoint 1  -> target /checkpoint/1
-  "https://link-hub.net/10011031/Cmbzeav4ae57",   // Checkpoint 2  -> target /checkpoint/2
-  "https://direct-link.net/10011031/hyRI1in6PVqp",   // Checkpoint 3  -> target /checkpoint/3
-  "https://direct-link.net/10011031/5hrHrbmgQA3Y",   // Checkpoint 4  -> target /checkpoint/4
-  "https://link-hub.net/10011031/ur61jQ6nbTzR",   // Checkpoint 5  -> target /checkpoint/5
+  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-1",   // Checkpoint 1  -> target /checkpoint/1
+  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-2",   // Checkpoint 2  -> target /checkpoint/2
+  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-3",   // Checkpoint 3  -> target /checkpoint/3
 ];
 const MIN_SECONDS_PER_CHECKPOINT = 10;        // finishing faster than this = bypass
 const REQUIRE_REFERER = true;                 // require coming back from an allowed ad site (below)
@@ -72,24 +70,24 @@ const LOGO_URL = "";     // optional: link to your own logo image (https://...)
 // Optional: show ONE image on the Games page instead of the game tiles.
 // Paste a link to your own hosted image (upload it, copy the direct link). "" = show the normal tiles.
 const GAMES_BANNER = "";
-const DISCORD_URL = "https://discord.gg/D8SM7VfTKZ";        // your Discord invite ("" to hide)
-const YOUTUBE_URL = "https://www.youtube.com/@jirombv";      // your YouTube channel ("" to hide)
+const DISCORD_URL = "https://discord.gg/YOUR-INVITE";        // your Discord invite ("" to hide)
+const YOUTUBE_URL = "https://youtube.com/@YOUR-CHANNEL";      // your YouTube channel ("" to hide)
 
 // Add your supported games here. status: "Supported", "Updating" or "Unsupported"
 // Games checklist. Just write the game name to show a check.
 // For a game that isn't ready, write { name: "X", soon: true } to show COMING SOON.
 const GAMES = [
-  "Anime Dice",
-  "Death Ball",
-  "Break And Steal Egg",
-  "Deep Fishing",
-  "Loot To Forge",
-  "Project Delta",
-  "Steal An Egg",
-  "Ride A Pet",
-  "Strafe Fps",
-  "Tap Simulator",
-  "Gun Forge",
+  "AnimeDice",
+  "DeathBall",
+  "BreakAndSteal",
+  "DeepFishing",
+  "LootToForge",
+  "ProjectDelta",
+  "StealAnEgg",
+  "RideAPet",
+  "StrafeFps",
+  "TapSimulator",
+  "GunForge",
   "Vabrant Survival",
   { name: "Bloxfruit", soon: true },
   { name: "Slayer2", soon: true },
@@ -103,10 +101,10 @@ const SCRIPTS = [
 // Add your executors here. status: "Working", "Updating" or "Down"
 // platform decides the section: "Android"/"iOS"/"Mobile" -> Mobile Executors, anything else -> PC Executors
 const EXECUTORS = [
-  { name: "Madium", platform: "Windows", price: "Free", status: "Working", description: "The #1 powerful scripting utility on the market.", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/madium.png", link: "https://getmadium.net/" },
-  { name: "Real", platform: "Windows", price: "Free", status: "Working", description: "Official Real Executor website. Download the free Roblox Lua executor for Windows, run scripts fast, use ScriptHub, and join the verified Project Real community..", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/real.png", link: "https://projectreal.gg/" },
-  { name: "Delta", platform: "Android, iOS", price: "Free", status: "Working", description: "Delta Executor is the greatest, safest, and most popular Roblox Executor. Download the official Delta Executor.", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/delta.jpg", link: "https://deltaexploits.gg/delta-executor" },
-  { name: "Arceus Neo", platform: "Android, iOS", price: "Free", status: "Working", description: "Powerful Roblox executor with advanced features, fast updates, and a clean UI.", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/arceus.png", link: "https://spdmteam.com/index" },
+  { name: "Swift", platform: "Windows", price: "Free", status: "Working", description: "Fast and stable PC executor. Low detection, supports most scripts.", image: "https://picsum.photos/seed/swift/400/200", link: "https://your-download-link.com/swift" },
+  { name: "Wave", platform: "Windows", price: "Paid", status: "Working", description: "Premium Windows executor with fast updates and strong script support.", image: "https://picsum.photos/seed/wave/400/200", link: "https://your-download-link.com/wave" },
+  { name: "Delta", platform: "Android", price: "Free", status: "Working", description: "Popular free mobile executor for Android. Easy setup.", image: "https://picsum.photos/seed/delta/400/200", link: "https://your-download-link.com/delta" },
+  { name: "Codex", platform: "iOS", price: "Free", status: "Working", description: "Free iOS executor for iPhone and iPad. No jailbreak needed.", image: "https://picsum.photos/seed/codex/400/200", link: "https://your-download-link.com/codex" },
 ];
 
 // FAQ on the home page: [question, answer]
@@ -1247,7 +1245,8 @@ async function newSession(req, res) {
   const fresh = { step: 0, startedAt: 0, ua: uaHash(req), ip: getIp(req), pending: 0, challenge: "", chAt: 0 };
   await redis.hset("session:" + sid, fresh);
   await redis.expire("session:" + sid, SESSION_TTL_SECONDS);
-  res.setHeader("Set-Cookie", `ks_sid=${sid}; Path=/; Max-Age=${SESSION_TTL_SECONDS}; HttpOnly; Secure; SameSite=Lax`);
+  // SameSite=None so the cookie survives the round-trip through the ad network (cross-site)
+  res.setHeader("Set-Cookie", `ks_sid=${sid}; Path=/; Max-Age=${SESSION_TTL_SECONDS}; HttpOnly; Secure; SameSite=None`);
   return { sid, key: "", ...fresh };
 }
 
@@ -1410,6 +1409,12 @@ app.get("/getkey", wrap(async (req, res) => {
   // ---- Next checkpoint ----
   const next = s.step + 1;
   const pct = Math.round((s.step / total) * 100);
+  // Arm the checkpoint when the page is shown, so the return works even if the
+  // ad network opens the destination without the /go hop surviving.
+  if (!s.startedAt) {
+    await redis.hset("session:" + s.sid, { startedAt: Date.now() });
+    s.startedAt = Date.now();
+  }
   res.send(cpPage(`Checkpoint ${next}`, `
     <h1>Checkpoint ${next}</h1>
     <p class="muted" style="margin:-2px 0 0">${s.step} of ${total} complete · ${pct}%</p>
@@ -1448,44 +1453,11 @@ app.get("/go/:n", wrap(async (req, res) => {
   res.redirect(CHECKPOINTS[n - 1]);
 }));
 
-// The ad network sends users here after they finish checkpoint n
-app.get("/checkpoint/:n", wrap(async (req, res) => {
-  res.setHeader("Cache-Control", "no-store");
-  if (await isBanned(req)) return res.status(403).send(bannedPage());
-  const n = parseInt(req.params.n, 10);
-  const s = await getSession(req);
-
-  if (!s) {
-    await addStrike(req);
-    return res.status(403).send(bypassPage("No checkpoint session found. Checkpoints must be started from this site."));
-  }
-  if (n <= s.step) return res.redirect("/getkey"); // already done (e.g. refreshed)
-
-  const fail = async reason => {
-    await resetSession(s);
-    await addStrike(req);
-    res.status(403).send(bypassPage(reason));
-  };
-
-  if (n !== s.step + 1) return fail("Checkpoints must be completed in order.");
-  if (!s.startedAt) return fail("This checkpoint wasn't started from this site.");
-  if ((Date.now() - s.startedAt) / 1000 < MIN_SECONDS_PER_CHECKPOINT) return fail("That checkpoint was finished too fast.");
-  if (REQUIRE_REFERER && !isAllowedReferer(req.headers.referer)) return fail("This checkpoint wasn't completed through the official link.");
-  const meta = checkFetchMeta(req);
-  if (meta) return fail(meta);
-  const client = sameClient(s, req);
-  if (client) return fail(client);
-  const rs = await redSquareVerdict(req);
-  if (rs) return fail("Bypass " + rs);
-
-  // Passed the server checks; now the browser security check
-  const challenge = "c" + crypto.randomBytes(12).toString("hex");
-  await redis.hset("session:" + s.sid, { pending: n, challenge, chAt: Date.now(), startedAt: 0 });
-
-  res.send(cpPage(`Verifying Checkpoint ${n}`, `
+function verifyPage(step, n, challenge) {
+  return cpPage(`Verifying Checkpoint ${n}`, `
     <h1>Verifying</h1>
     <p class="muted" style="margin:-2px 0 0">Checkpoint ${n} of ${CHECKPOINTS.length}</p>
-    ${ring(s.step, CHECKPOINTS.length, `${ICONS.shield}<small>SCANNING</small>`, `<div class="sweep"></div>`)}
+    ${ring(step, CHECKPOINTS.length, `${ICONS.shield}<small>SCANNING</small>`, `<div class="sweep"></div>`)}
     <div class="vsteps">
       <div class="vstep"><i></i>Checking session</div>
       <div class="vstep wait"><i></i>Validating checkpoint</div>
@@ -1560,7 +1532,49 @@ app.get("/checkpoint/:n", wrap(async (req, res) => {
           } catch (e) { sent = false; holdLabel.textContent = "Hold to verify"; up(); msg.className = "msg err"; msg.textContent = "Network error, try again."; }
         }
       })();
-    </script>`, { done: s.step, total: CHECKPOINTS.length, mode: "verifying" }));
+    </script>`, { done: step, total: CHECKPOINTS.length, mode: "verifying" });
+}
+
+// The ad network sends users here after they finish checkpoint n
+app.get("/checkpoint/:n", wrap(async (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  if (await isBanned(req)) return res.status(403).send(bannedPage());
+  const n = parseInt(req.params.n, 10);
+  const s = await getSession(req);
+
+  if (!s) {
+    await addStrike(req);
+    return res.status(403).send(bypassPage("No checkpoint session found. Checkpoints must be started from this site."));
+  }
+  if (n <= s.step) return res.redirect("/getkey"); // already done (e.g. refreshed)
+
+  // Already passed this checkpoint and waiting to verify (e.g. refreshed the page) -> resume, don't block
+  if (s.pending === n && s.challenge) {
+    await redis.hset("session:" + s.sid, { chAt: Date.now() });
+    return res.send(verifyPage(s.step, n, s.challenge));
+  }
+
+  const fail = async reason => {
+    await resetSession(s);
+    await addStrike(req);
+    res.status(403).send(bypassPage(reason));
+  };
+
+  if (n !== s.step + 1) return fail("Checkpoints must be completed in order.");
+  if (!s.startedAt) return fail("This checkpoint wasn't started from this site.");
+  if ((Date.now() - s.startedAt) / 1000 < MIN_SECONDS_PER_CHECKPOINT) return fail("That checkpoint was finished too fast.");
+  if (REQUIRE_REFERER && !isAllowedReferer(req.headers.referer)) return fail("This checkpoint wasn't completed through the official link.");
+  const meta = checkFetchMeta(req);
+  if (meta) return fail(meta);
+  const client = sameClient(s, req);
+  if (client) return fail(client);
+  const rs = await redSquareVerdict(req);
+  if (rs) return fail("Bypass " + rs);
+
+  // Passed the server checks; now the browser security check
+  const challenge = "c" + crypto.randomBytes(12).toString("hex");
+  await redis.hset("session:" + s.sid, { pending: n, challenge, chAt: Date.now(), startedAt: 0 });
+  res.send(verifyPage(s.step, n, challenge));
 }));
 
 // Browser security check result
