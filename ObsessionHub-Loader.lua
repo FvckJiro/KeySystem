@@ -45,8 +45,13 @@ local Config = {
         { name = "Death Ball",    url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/BladeBall.lua",  requiresKey = true,  placeIds = { 5166944221, 15002061926 } },
         { name = "Break And Steal An Egg",   url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/BreakAndSteal.lua",       requiresKey = true, placeIds = { 114326934417838 } },
         { name = "Anime Dice",   url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/AnimeDice.lua",       requiresKey = true, placeIds = { 113290951185459, 10708913337 } },
-        { name = "Break And Steal An Egg",   url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/BreakAndSteal.lua",       requiresKey = true, placeIds = { 114326934417838 } },
-        { name = "Universal Hub", url = "https://raw.githubusercontent.com/YOU/REPO/main/universal.lua", requiresKey = true,  universal = true },
+        { name = "Steal An Egg",   url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/StealAnEgg.lua",       requiresKey = true, placeIds = { 107778070777162, 10563114921 } },
+        { name = "Strafe Fps",   url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/StrafeFps.lua",       requiresKey = true, placeIds = { 109020905733214, 9187332740 } },
+        { name = "Ride A Pet",   url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/RideAPet.lua",       requiresKey = true, placeIds = { 124216119978534 } },
+        { name = "Deep Fishing",   url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/DeepFishing.lua",       requiresKey = true, placeIds = { 132239307080610 } },
+        { name = "Gun Forge",   url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/GunForge.lua",       requiresKey = true, placeIds = { 75687962646869, 10766957927 } },
+        { name = "Vabrant Survival",   url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/VabrantSurvival.lua",       requiresKey = true, placeIds = { 100283815455755, 9224753153 } },
+        
     },
 
     -- Optional image shown at the top of the loader. Use YOUR OWN art.
