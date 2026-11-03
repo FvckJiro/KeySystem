@@ -33,9 +33,9 @@ const SITE_NAME = "ObsessionHub";             // shown at the top of every page
 // For Linkvertise: create the link with that target, then turn ON "Anti-Bypass" in the
 // Linkvertise dashboard for each link (that is Linkvertise's own server-side protection).
 const CHECKPOINTS = [
-  "https://direct-link.net/10011031/B72fEGbf5kYG",   // Checkpoint 1  -> target /checkpoint/1
-  "https://link-hub.net/10011031/Cmbzeav4ae57",   // Checkpoint 2  -> target /checkpoint/2
-  "https://direct-link.net/10011031/hyRI1in6PVqp",   // Checkpoint 3  -> target /checkpoint/3
+  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-1",   // Checkpoint 1  -> target /checkpoint/1
+  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-2",   // Checkpoint 2  -> target /checkpoint/2
+  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-3",   // Checkpoint 3  -> target /checkpoint/3
 ];
 const MIN_SECONDS_PER_CHECKPOINT = 10;        // finishing faster than this = bypass
 const REQUIRE_REFERER = true;                 // require coming back from an allowed ad site (below)
@@ -1887,6 +1887,21 @@ app.post("/admin/api/blacklist-list", wrap(async (req, res) => {
   res.json((await redis.hgetall("blacklist")) || {});
 }));
 
+// Clear all temporary IP bans + strikes (handy during testing / to unblock someone)
+app.post("/admin/api/clear-bans", wrap(async (req, res) => {
+  let cleared = 0;
+  for (const pattern of ["ban:*", "strikes:*"]) {
+    let cursor = "0";
+    do {
+      const out = await redis.scan(cursor, { match: pattern, count: 200 });
+      cursor = Array.isArray(out) ? String(out[0]) : "0";
+      const keys = Array.isArray(out) ? out[1] : [];
+      if (keys && keys.length) { await redis.del(...keys); if (pattern === "ban:*") cleared += keys.length; }
+    } while (cursor !== "0");
+  }
+  res.json({ success: true, bansCleared: cleared });
+}));
+
 // Recently generated keys + total count, for the "Generated Keys" view
 app.post("/admin/api/recent", wrap(async (req, res) => {
   const total = Number(await redis.get("stats:generated")) || 0;
@@ -1947,6 +1962,7 @@ app.get("/admin", (req, res) => {
       <button data-a="blacklist">Blacklist</button>
       <button data-a="unblacklist" class="ghost">Unblacklist</button>
       <button data-a="blacklist-list" class="ghost">View Blacklist</button>
+      <button data-a="clear-bans">Clear Bans</button>
     </div>
     <p class="muted" style="font-size:.8rem;margin:10px 0 0">Blacklist uses the HWID field, or the key's bound HWID if HWID is empty.</p>
 
