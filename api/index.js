@@ -33,16 +33,16 @@ const SITE_NAME = "ObsessionHub";             // shown at the top of every page
 // For Linkvertise: create the link with that target, then turn ON "Anti-Bypass" in the
 // Linkvertise dashboard for each link (that is Linkvertise's own server-side protection).
 const CHECKPOINTS = [
-  "https://direct-link.net/10011031/B72fEGbf5kYG",   // Checkpoint 1  -> target /checkpoint/1
-  "https://link-hub.net/10011031/Cmbzeav4ae57",   // Checkpoint 2  -> target /checkpoint/2
-  "https://direct-link.net/10011031/hyRI1in6PVqp",   // Checkpoint 3  -> target /checkpoint/3
+  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-1",   // Checkpoint 1  -> target /checkpoint/1
+  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-2",   // Checkpoint 2  -> target /checkpoint/2
+  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-3",   // Checkpoint 3  -> target /checkpoint/3
 ];
 const MIN_SECONDS_PER_CHECKPOINT = 10;        // finishing faster than this = bypass
 const REQUIRE_REFERER = true;                 // require coming back from an allowed ad site (below)
 const CHECK_FETCH_META = true;                // block bypass tools that fetch the link instead of really visiting it
 const SESSION_TTL_SECONDS = 60 * 60;          // users have 1 hour to finish all checkpoints
 const POW_DIFFICULTY = 4;                     // browser security check strength: 3 light, 4 strong, 5 very strong (slower)
-const BIND_IP = true;                         // session must keep the same IP (set false if mobile users get false bypasses)
+const BIND_IP = false;                        // keep false: mobile IPs change mid-checkpoint and cause false bypasses
 const MAX_STRIKES = 3;                        // bypass attempts before a temporary IP ban
 const BAN_SECONDS = 5 * 60 * 60;              // ban length (5 hours)
 
@@ -1289,10 +1289,11 @@ function checkFetchMeta(req) {
   const dest = req.headers["sec-fetch-dest"];
   const mode = req.headers["sec-fetch-mode"];
   const site = req.headers["sec-fetch-site"];
+  // Only catch scripted fetch/XHR: a real tab navigation is always document + navigate.
+  // We do NOT block on sec-fetch-site "none" — ad networks often open the destination
+  // with the referrer stripped, which legitimately looks like a direct open.
   if (dest && dest !== "document") return "This checkpoint wasn't opened in a real browser tab.";
   if (mode && mode !== "navigate") return "This checkpoint wasn't opened in a real browser tab.";
-  // A real return from the ad site is a cross-site navigation; "none" means the URL was opened directly.
-  if (site && site === "none") return "This checkpoint wasn't reached through the official link.";
   return "";
 }
 
@@ -1563,7 +1564,9 @@ app.get("/checkpoint/:n", wrap(async (req, res) => {
   if (n !== s.step + 1) return fail("Checkpoints must be completed in order.");
   if (!s.startedAt) return fail("This checkpoint wasn't started from this site.");
   if ((Date.now() - s.startedAt) / 1000 < MIN_SECONDS_PER_CHECKPOINT) return fail("That checkpoint was finished too fast.");
-  if (REQUIRE_REFERER && !isAllowedReferer(req.headers.referer)) return fail("This checkpoint wasn't completed through the official link.");
+  // Lenient referrer check: ad networks often strip the referrer, so a MISSING referrer is allowed.
+  // Only block when a referrer is present but is NOT an allowed ad domain.
+  if (REQUIRE_REFERER && req.headers.referer && !isAllowedReferer(req.headers.referer)) return fail("This checkpoint wasn't completed through the official link.");
   const meta = checkFetchMeta(req);
   if (meta) return fail(meta);
   const client = sameClient(s, req);
