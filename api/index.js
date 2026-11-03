@@ -33,9 +33,9 @@ const SITE_NAME = "ObsessionHub";             // shown at the top of every page
 // For Linkvertise: create the link with that target, then turn ON "Anti-Bypass" in the
 // Linkvertise dashboard for each link (that is Linkvertise's own server-side protection).
 const CHECKPOINTS = [
-  "https://direct-link.net/10011031/B72fEGbf5kYG",   // Checkpoint 1
-  "https://link-hub.net/10011031/Cmbzeav4ae57",   // Checkpoint 2
-  "https://direct-link.net/10011031/hyRI1in6PVqp",   // Checkpoint 3
+  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-1",   // Checkpoint 1
+  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-2",   // Checkpoint 2
+  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-3",   // Checkpoint 3
 ];
 const MIN_SECONDS_PER_CHECKPOINT = 10;        // finishing faster than this = bypass
 const REQUIRE_REFERER = true;                 // require coming back from an allowed ad site (below)
@@ -888,7 +888,7 @@ function siteNav(active) {
   <a class="logo" href="/">${logo}</a>
   <button class="menu-btn" type="button" aria-label="Menu" onclick="document.body.classList.toggle('menu-open')"><span></span><span></span><span></span></button>
   <div class="links">
-    ${link("/", "Home", "home")}${link("/games", "Games", "games")}${link("/scripts", "Scripts", "scripts")}${link("/executors", "Executors", "executors")}${link("/checker", "Key Checker", "checker")}
+    ${link("/", "Home", "home")}${link("/games", "Games", "games")}${link("/scripts", "Scripts", "scripts")}${link("/executors", "Executors", "executors")}${link("/checker", "Key Checker", "checker")}${link("/reset", "Reset HWID", "reset")}
     <a href="/getkey" class="nav-cta">Get Key</a>
   </div>
 </div></nav>`;
@@ -1589,7 +1589,37 @@ app.post("/api/key-status", wrap(async (req, res) => {
 }));
 
 // Old reset page now lives inside the Key Checker
-app.get("/reset", (req, res) => res.redirect("/checker"));
+app.get("/reset", (req, res) => {
+  const pre = KEY_RE.test(str(req.query && req.query.key).toUpperCase()) ? str(req.query.key).toUpperCase() : "";
+  res.send(page("Reset HWID", `
+    <h1>Reset HWID</h1>
+    <p class="muted">Changed devices? Unlock your key so it works on your new device.</p>
+    <input id="key" placeholder="${KEY_PLACEHOLDER}" autocomplete="off" spellcheck="false" value="${pre}">
+    <button id="go" style="width:100%;margin:8px 0 0">Reset HWID</button>
+    <p id="msg" class="msg"></p>
+    <p class="muted" style="font-size:.85rem;margin-top:14px">You can reset once every 12 hours.<br>
+    <a href="/checker">Check your key</a> · <a href="/">Home</a></p>
+    <script>
+      (function(){
+        var input = document.getElementById("key"), msg = document.getElementById("msg"), go = document.getElementById("go");
+        async function reset(){
+          var key = input.value.trim().toUpperCase();
+          msg.className = "msg"; msg.textContent = "Working...";
+          try {
+            var r = await fetch("/reset-hwid", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: key }) });
+            var d = await r.json();
+            if (d.success) { msg.className = "msg ok"; msg.textContent = "Done! Your key is unlocked — use it on your new device."; return; }
+            msg.className = "msg err";
+            msg.textContent = d.reason === "cooldown"
+              ? "On cooldown. Try again in " + Math.ceil(d.retryInSeconds / 60) + " minutes."
+              : "Invalid or expired key.";
+          } catch (e) { msg.className = "msg err"; msg.textContent = "Network error, try again."; }
+        }
+        go.onclick = reset;
+        input.addEventListener("keydown", function(e){ if (e.key === "Enter") reset(); });
+      })();
+    </script>`, "device"));
+});
 
 // ===== USER HWID RESET =====
 
@@ -1623,10 +1653,11 @@ app.post("/admin/api/create-key", wrap(async (req, res) => {
   const lifetime = req.body.lifetime === true;
   const days = Math.max(0, Math.floor(Number(req.body.days) || 0));
   const hours = Math.max(0, Math.floor(Number(req.body.hours) || 0));
+  const minutes = Math.max(0, Math.floor(Number(req.body.minutes) || 0));
   const amount = Math.min(50, Math.max(1, Math.floor(Number(req.body.amount) || 1)));
   const devices = Math.min(100, Math.max(1, Math.floor(Number(req.body.devices) || 1)));
   const label = (typeof req.body.label === "string" ? req.body.label.trim() : "").slice(0, 24);
-  const ttl = (days * 24 + hours) * 3600;
+  const ttl = (days * 24 + hours) * 3600 + minutes * 60;
 
   if (!lifetime && ttl <= 0) {
     return res.json({ success: false, error: "Enter days/hours or tick Lifetime" });
@@ -1645,7 +1676,7 @@ app.post("/admin/api/create-key", wrap(async (req, res) => {
   }
   res.json({
     success: true,
-    duration: lifetime ? "lifetime" : `${days}d ${hours}h`,
+    duration: lifetime ? "lifetime" : `${days}d ${hours}h ${minutes}m`,
     devices, label: label || null, keys,
   });
 }));
@@ -1729,6 +1760,7 @@ app.get("/admin", (req, res) => {
     <div class="row">
       <input id="days" type="number" min="0" inputmode="numeric" placeholder="Days">
       <input id="hours" type="number" min="0" inputmode="numeric" placeholder="Hours">
+      <input id="minutes" type="number" min="0" inputmode="numeric" placeholder="Mins">
       <input id="amount" type="number" min="1" max="50" inputmode="numeric" placeholder="Amount" value="1">
     </div>
     <div class="row">
@@ -1772,6 +1804,7 @@ app.get("/admin", (req, res) => {
         life.onchange = function(){
           document.getElementById("days").disabled = life.checked;
           document.getElementById("hours").disabled = life.checked;
+          document.getElementById("minutes").disabled = life.checked;
         };
 
         document.querySelectorAll("button[data-a]").forEach(function(btn){
@@ -1783,7 +1816,7 @@ app.get("/admin", (req, res) => {
                 headers: { "Content-Type": "application/json", "x-admin-secret": v("secret") },
                 body: JSON.stringify({
                   key: v("key"), hwid: v("hwid"), reason: v("reason"),
-                  days: v("days"), hours: v("hours"), amount: v("amount"), lifetime: life.checked,
+                  days: v("days"), hours: v("hours"), minutes: v("minutes"), amount: v("amount"), lifetime: life.checked,
                   devices: v("devices"), label: v("label")
                 })
               });
