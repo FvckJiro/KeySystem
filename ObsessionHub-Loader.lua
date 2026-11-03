@@ -19,9 +19,9 @@
 
 --========================[ CONFIG — EDIT THIS ]========================--
 local Config = {
-    Website   = "https://your-site.vercel.app",      -- your key site (NO trailing slash)
-    GetKeyURL = "https://your-site.vercel.app/getkey", -- where users get a key
-    Discord   = "https://discord.gg/YOUR-INVITE",      -- "" to hide the button
+    Website   = "https://keysystem-orcin-sigma.vercel.app",      -- your key site (NO trailing slash)
+    GetKeyURL = "https://keysystem-orcin-sigma.vercel.app/getkey", -- where users get a key
+    Discord   = "https://discord.gg/your-real-invite",      -- "" to hide the button
     Youtube   = "https://youtube.com/@YOUR-CHANNEL",    -- "" to hide the button
 
     RememberKey = true,   -- save the key on this device so users don't retype it
