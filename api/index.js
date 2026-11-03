@@ -1226,14 +1226,7 @@ function getCookie(req, name) {
 // cookies -- which was causing progress to reset to Checkpoint 1 on mobile/in-app browsers.
 const cookieHeader = sid => `ks_sid=${sid}; Path=/; Max-Age=${SESSION_TTL_SECONDS}; HttpOnly; Secure; SameSite=Lax`;
 
-async function getSession(req) {
-  // Cookie first; fall back to the session id carried in the URL (?s=). Some mobile/in-app
-  // browsers drop our cookie between page loads, which was resetting progress to Checkpoint 1.
-  // Carrying the sid in our own internal links keeps the session alive even with no cookie.
-  let sid = getCookie(req, "ks_sid");
-  if (!SID_RE.test(sid) && req.query) sid = str(req.query.s);
-  if (!SID_RE.test(sid)) return null;
-  const s = await redis.hgetall("session:" + sid);
+function hydrate(sid, s) {
   if (!s) return null;
   return {
     sid,
@@ -1246,6 +1239,20 @@ async function getSession(req) {
     challenge: String(s.challenge || ""),
     chAt: Number(s.chAt) || 0,
   };
+}
+
+async function loadSession(sid) {
+  if (!SID_RE.test(sid)) return null;
+  return hydrate(sid, await redis.hgetall("session:" + sid));
+}
+
+async function getSession(req) {
+  // URL (?s=) FIRST, cookie second. Our own redirects always carry the correct, fresh session id
+  // in ?s=; the cookie can be stale or dropped in mobile/in-app browsers, which was overriding the
+  // right session and resetting progress to Checkpoint 1. The URL param is the source of truth.
+  let sid = req.query ? str(req.query.s) : "";
+  if (!SID_RE.test(sid)) sid = getCookie(req, "ks_sid");
+  return loadSession(sid);
 }
 
 async function newSession(req, res) {
@@ -1464,6 +1471,9 @@ app.get("/go/:n", wrap(async (req, res) => {
   const s = await getSession(req);
   if (!s || n !== s.step + 1 || !CHECKPOINTS[n - 1]) return res.redirect("/getkey");
   await redis.hset("session:" + s.sid, { startedAt: Date.now(), pending: 0, challenge: "", chAt: 0 });
+  // IP bridge: the return leg from the ad network (/checkpoint/N) has no ?s= and may arrive with no
+  // cookie, so remember which session this IP just launched. Short TTL, used only to resume the flow.
+  await redis.set("ipsess:" + getIp(req), s.sid, { ex: 20 * 60 });
   // Don't leak the session id (?s=) to the ad network in the Referer header.
   res.setHeader("Referrer-Policy", "no-referrer");
   res.redirect(CHECKPOINTS[n - 1]);
@@ -1556,13 +1566,22 @@ app.get("/checkpoint/:n", wrap(async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   if (await isBanned(req)) return res.status(403).send(bannedPage());
   const n = parseInt(req.params.n, 10);
-  const s = await getSession(req);
+  let s = await getSession(req);
+
+  // IP bridge recovery: the ad network returns here with no ?s= and sometimes no cookie. If we
+  // can't identify the session the normal way, resume the one this IP launched a moment ago.
+  if (!s) {
+    const rid = str(await redis.get("ipsess:" + getIp(req)));
+    s = await loadSession(rid);
+  }
 
   if (!s) {
     await addStrike(req);
     return res.status(403).send(bypassPage("No checkpoint session found. Checkpoints must be started from this site."));
   }
-  if (n <= s.step) return res.redirect("/getkey"); // already done (e.g. refreshed)
+  // Keep the session alive on this device: re-anchor the cookie for the rest of the flow.
+  res.setHeader("Set-Cookie", cookieHeader(s.sid));
+  if (n <= s.step) return res.redirect("/getkey?s=" + s.sid); // already done (e.g. refreshed)
 
   // Already passed this checkpoint and waiting to verify (e.g. refreshed the page) -> resume, don't block
   if (s.pending === n && s.challenge) {
@@ -1679,7 +1698,22 @@ app.post("/checkpoint/verify", wrap(async (req, res) => {
 }));
 
 // Build marker so you can confirm which version Vercel is actually running.
-app.get("/version", (req, res) => res.json({ build: "cp-urlsession-v5", checkpoints: CHECKPOINTS.length }));
+app.get("/version", (req, res) => res.json({ build: "cp-ipbridge-v6", checkpoints: CHECKPOINTS.length }));
+
+// Debug: shows how the server resolves your session right now (cookie vs URL vs IP bridge).
+app.get("/whoami", wrap(async (req, res) => {
+  const cookieSid = getCookie(req, "ks_sid");
+  const urlSid = req.query ? str(req.query.s) : "";
+  const ipSid = str(await redis.get("ipsess:" + getIp(req)));
+  const resolved = await getSession(req);
+  res.json({
+    resolvedSid: resolved ? resolved.sid : null,
+    resolvedStep: resolved ? resolved.step : null,
+    cookieSid: cookieSid || null,
+    urlSid: urlSid || null,
+    ipBridgeSid: ipSid || null,
+  });
+}));
 
 // Old link still works
 app.get("/generate-key", (req, res) => res.redirect("/getkey"));
