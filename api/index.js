@@ -33,11 +33,11 @@ const SITE_NAME = "ObsessionHub";             // shown at the top of every page
 // For Linkvertise: create the link with that target, then turn ON "Anti-Bypass" in the
 // Linkvertise dashboard for each link (that is Linkvertise's own server-side protection).
 const CHECKPOINTS = [
-  "https://direct-link.net/10011031/B72fEGbf5kYG",   // Checkpoint 1  -> target /checkpoint/1
-  "https://link-hub.net/10011031/Cmbzeav4ae57",   // Checkpoint 2  -> target /checkpoint/2
-  "https://direct-link.net/10011031/hyRI1in6PVqp",   // Checkpoint 3  -> target /checkpoint/3
-  "https://direct-link.net/10011031/5hrHrbmgQA3Y",   // Checkpoint 4  -> target /checkpoint/4
-  "https://link-hub.net/10011031/ur61jQ6nbTzR",   // Checkpoint 5  -> target /checkpoint/5
+  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-1",   // Checkpoint 1  -> target /checkpoint/1
+  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-2",   // Checkpoint 2  -> target /checkpoint/2
+  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-3",   // Checkpoint 3  -> target /checkpoint/3
+  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-4",   // Checkpoint 4  -> target /checkpoint/4
+  "https://linkvertise.com/REPLACE-WITH-YOUR-LINK-5",   // Checkpoint 5  -> target /checkpoint/5
 ];
 const MIN_SECONDS_PER_CHECKPOINT = 10;        // finishing faster than this = bypass
 const REQUIRE_REFERER = true;                 // require coming back from an allowed ad site (below)
@@ -1748,6 +1748,23 @@ app.post("/admin/api/recent", wrap(async (req, res) => {
   const total = Number(await redis.get("stats:generated")) || 0;
   const raw = (await redis.lrange("recent:keys", 0, 49)) || [];
   const items = raw.map(x => { try { return JSON.parse(x); } catch (e) { return null; } }).filter(Boolean);
+
+  // Mark each key active/expired and its time left (one round-trip via pipeline).
+  if (items.length) {
+    try {
+      const pipe = redis.pipeline();
+      items.forEach(it => pipe.ttl("key:" + it.key));
+      const ttls = await pipe.exec();
+      items.forEach((it, i) => {
+        const t = Number(ttls[i]);          // -2 gone/expired, -1 lifetime, >=0 seconds left
+        it.active = t !== -2;
+        it.ttl = t;
+      });
+    } catch (e) {
+      // fall back: check existence individually
+      for (const it of items) { it.active = (await redis.exists("key:" + it.key)) === 1; it.ttl = it.active ? -1 : -2; }
+    }
+  }
   res.json({ total, shown: items.length, items });
 }));
 
@@ -1838,15 +1855,24 @@ app.get("/admin", (req, res) => {
           };
         });
 
+        function fmtLeft(t){
+          if (t === -1) return "lifetime";
+          if (t < 0) return "";
+          var h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60);
+          return h >= 24 ? (Math.floor(h / 24) + "d " + (h % 24) + "h left") : (h + "h " + m + "m left");
+        }
         function renderRecent(d){
           var stamp = new Date().toLocaleTimeString();
           if (!d.items.length) { out.textContent = "No keys generated yet.\\n\\nLast checked: " + stamp; return; }
+          var active = 0;
           var lines = d.items.map(function(it){
-            var when = new Date(it.at).toLocaleString();
-            var tag = it.type === "lifetime" ? "LIFETIME" : it.type === "admin" ? "ADMIN" : "USER";
-            return it.key + "  ·  " + tag + "  ·  " + when;
+            if (it.active) active++;
+            var tag = (it.label && it.type === "custom") ? it.label.toUpperCase()
+                    : it.type === "lifetime" ? "LIFETIME" : it.type === "admin" ? "ADMIN" : "USER";
+            var state = it.active ? ("ACTIVE" + (fmtLeft(it.ttl) ? " (" + fmtLeft(it.ttl) + ")" : "")) : "EXPIRED";
+            return (it.active ? "● " : "○ ") + it.key + "  ·  " + tag + "  ·  " + state;
           });
-          out.textContent = "TOTAL GENERATED: " + d.total + "  (showing last " + d.shown + ")" +
+          out.textContent = "TOTAL: " + d.total + "   ACTIVE: " + active + " / " + d.shown +
             "\\nLast updated: " + stamp + (auto.checked ? "  · live" : "") + "\\n\\n" + lines.join("\\n");
         }
 
