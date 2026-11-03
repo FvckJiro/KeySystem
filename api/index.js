@@ -71,13 +71,13 @@ const TAGLINE = "Get your key, pick your script, and start playing. Keys last 5 
 const LOGO_URL = "";     // optional: link to your own logo image (https://...)
 // Optional: show ONE image on the Games page instead of the game tiles.
 // Paste a link to your own hosted image (upload it, copy the direct link). "" = show the normal tiles.
-const GAMES_BANNER = "";
+const GAMES_BANNER = "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/suppoted.png";
 const DISCORD_URL = "https://discord.gg/D8SM7VfTKZ";        // your Discord invite ("" to hide)
 const YOUTUBE_URL = "https://www.youtube.com/@jirombv";      // your YouTube channel ("" to hide)
 
 // Add your supported games here. status: "Supported", "Updating" or "Unsupported"
 const GAMES = [
-   { name: "Game Name", status: "Supported", description: "Short note", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/suppoted.png", link: "https://www.roblox.com/games/..." },
+  // { name: "Game Name", status: "Supported", description: "Short note", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/suppoted.png", link: "https://www.roblox.com/games/..." },
 ];
 
 // Add your scripts here. status: "Working", "Updating" or "Patched"
