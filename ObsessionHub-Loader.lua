@@ -30,7 +30,7 @@ local Config = {
 
     -- Kick the player when their key expires or gets revoked while playing
     KickOnExpire = true,
-    RecheckSeconds = 60, -- how often to re-check the key in the background (seconds)
+    RecheckSeconds = 30, -- how often to re-check the key in the background (seconds)
 
     -- Your scripts. The loader auto-detects the game by its Place ID and loads the match.
     --   name        = shown in the loader
