@@ -36,7 +36,7 @@ local Config = {
     --   url         = GitHub raw link to the .lua script
     --   requiresKey = true -> needs a valid key, false -> free/no key
     Scripts = {
-        { name = "Blox Fruits",  url = "https://raw.githubusercontent.com/YOU/REPO/main/bloxfruits.lua", requiresKey = true },
+        { name = "Tap Simulator",  url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/TapSimulator.lua", requiresKey = true },
         { name = "Blade Ball",   url = "https://raw.githubusercontent.com/YOU/REPO/main/bladeball.lua",  requiresKey = true },
         { name = "Universal Hub", url = "https://raw.githubusercontent.com/YOU/REPO/main/universal.lua", requiresKey = true },
         { name = "Free Script",  url = "https://raw.githubusercontent.com/YOU/REPO/main/free.lua",       requiresKey = false },
