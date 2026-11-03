@@ -43,7 +43,7 @@ local Config = {
     Scripts = {
         { name = "Tap Simulator",   url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/TapSimulator.lua", requiresKey = true,  placeIds = { 72858262610964, 10629695169 } },
         { name = "Death Ball",    url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/BladeBall.lua",  requiresKey = true,  placeIds = { 5166944221, 15002061926 } },
-        { name = "Free Script",   url = "https://raw.githubusercontent.com/YOU/REPO/main/free.lua",       requiresKey = false, placeIds = { 123456789 } },
+        { name = "Break And Steal An Egg",   url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/BreakAndSteal.lua",       requiresKey = true, placeIds = { 114326934417838 } },
         { name = "Universal Hub", url = "https://raw.githubusercontent.com/YOU/REPO/main/universal.lua", requiresKey = true,  universal = true },
     },
 
