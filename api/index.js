@@ -1598,12 +1598,14 @@ app.get("/checkpoint/:n", wrap(async (req, res) => {
     }
   }
 
-  // Passed the soft checks; now the real browser security check (this is the anti-bypass gate)
+  // Passed the soft checks; now the real browser security check (this is the anti-bypass gate).
+  // The challenge is the SOURCE OF TRUTH for verification: we store it with the session id, the
+  // checkpoint number, and the issue time, independent of the session's "pending" flag. That way
+  // verification works even if a stray request, a double-open, or a lost cookie clears/changes
+  // the session state during the ad round-trip (the exact cause of "No checkpoint is waiting").
   const challenge = "c" + crypto.randomBytes(12).toString("hex");
   await redis.hset("session:" + s.sid, { pending: n, challenge, chAt: Date.now(), startedAt: 0 });
-  // Index the challenge -> session so the verify step can recover even if the cookie is lost
-  // in the ad round-trip (common in mobile in-app browsers). Single-use, short TTL.
-  await redis.set("chal:" + challenge, s.sid, { ex: 15 * 60 });
+  await redis.set("chal:" + challenge, s.sid + "|" + n + "|" + Date.now(), { ex: 15 * 60 });
   res.send(verifyPage(s.step, n, challenge));
 }));
 
@@ -1614,63 +1616,54 @@ app.post("/checkpoint/verify", wrap(async (req, res) => {
   const nonce = typeof body.nonce === "string" ? body.nonce : "";
   const postedCh = str(body.ch);
 
-  // Resolve the session. The cookie is the primary source, but the ad round-trip can land the
-  // user in a different cookie context (mobile in-app browsers), so if the cookie session isn't
-  // the one holding this challenge, recover it from the challenge->session index we stored when
-  // the challenge was issued. The challenge is only handed to a page that passed the GET gate.
-  let s = await getSession(req);
-  if ((!s || s.challenge !== postedCh || !s.pending) && /^c[a-f0-9]{24}$/.test(postedCh)) {
-    const sid = str(await redis.get("chal:" + postedCh));
-    if (SID_RE.test(sid)) {
-      const h = await redis.hgetall("session:" + sid);
-      if (h) {
-        s = {
-          sid,
-          step: Number(h.step) || 0,
-          startedAt: Number(h.startedAt) || 0,
-          key: h.key ? String(h.key) : "",
-          ua: String(h.ua || ""),
-          ip: String(h.ip || ""),
-          pending: Number(h.pending) || 0,
-          challenge: String(h.challenge || ""),
-          chAt: Number(h.chAt) || 0,
-        };
-      }
-    }
-  }
+  // Look the challenge up in its index. This is the single source of truth: if it exists, a real
+  // checkpoint page issued it (so the gate was passed) and it hasn't been used yet. We do NOT rely
+  // on the session cookie or its pending flag, which can be dropped or reset in the ad round-trip.
+  if (!/^c[a-f0-9]{24}$/.test(postedCh)) return res.json({ ok: false, reason: "No checkpoint is waiting for verification." });
+  const meta = str(await redis.get("chal:" + postedCh));
+  const parts = meta.split("|");
+  const sid = parts[0] || "";
+  const n = Number(parts[1]) || 0;
+  const issuedAt = Number(parts[2]) || 0;
+  if (!SID_RE.test(sid) || n < 1) return res.json({ ok: false, reason: "No checkpoint is waiting for verification." });
 
-  if (!s || !s.pending || s.pending !== s.step + 1 || !s.challenge || s.challenge !== postedCh) {
+  const h = await redis.hgetall("session:" + sid);
+  const step = h ? Number(h.step) || 0 : 0;
+  if (!h || n !== step + 1) {
+    // Already advanced (replay / double-submit) or out of order.
     return res.json({ ok: false, reason: "No checkpoint is waiting for verification." });
   }
 
   const fail = async reason => {
-    await redis.del("chal:" + s.challenge);
-    await resetSession(s);
+    await redis.del("chal:" + postedCh);
+    await redis.hset("session:" + sid, { pending: 0, challenge: "", chAt: 0 });
     await addStrike(req);
     res.json({ ok: false, reason: "Bypass detected: " + reason });
   };
 
-  const since = Date.now() - s.chAt;
+  const since = Date.now() - issuedAt;
 
-  // Real bot signals -> strike. (We no longer check UA here: in-app vs system browser handoffs
-  // after the ad legitimately change the UA, and the challenge + proof-of-work + hold already
-  // prove a real human in a real browser that passed the checkpoint gate.)
+  // Real bot signals -> strike. (No UA check: in-app vs system browser handoffs after the ad
+  // legitimately change the UA; the challenge + proof-of-work + hold already prove a real human.)
   if (body.wd === true) return fail("automated browser.");
   if (body.hp) return fail("bot activity.");
   if (since < 2500) return fail("verification was too fast.");
-  if (since > 10 * 60 * 1000) return fail("verification took too long.");
+  if (since > 15 * 60 * 1000) return fail("verification took too long.");
   if (!/^\d{1,12}$/.test(nonce)) return fail("invalid security check.");
-  const hash = crypto.createHash("sha256").update(s.challenge + nonce).digest("hex");
+  const hash = crypto.createHash("sha256").update(postedCh + nonce).digest("hex");
   if (!hash.startsWith("0".repeat(POW_DIFFICULTY))) return fail("invalid security check.");
 
-  const n = s.pending;
-  await redis.del("chal:" + s.challenge);
-  await redis.hset("session:" + s.sid, { step: n, pending: 0, challenge: "", chAt: 0 });
-  // Re-anchor the cookie to this session so the next checkpoint's Get Key page tracks it, even
-  // if we recovered via the challenge index.
-  res.setHeader("Set-Cookie", `ks_sid=${s.sid}; Path=/; Max-Age=${SESSION_TTL_SECONDS}; HttpOnly; Secure; SameSite=None`);
+  // Passed. Advance this session to checkpoint n and consume the challenge.
+  await redis.del("chal:" + postedCh);
+  await redis.hset("session:" + sid, { step: n, pending: 0, challenge: "", chAt: 0 });
+  // Re-anchor the cookie to this session so the next checkpoint's Get Key page tracks it, even if
+  // the ad round-trip landed the verify POST in a different cookie context.
+  res.setHeader("Set-Cookie", `ks_sid=${sid}; Path=/; Max-Age=${SESSION_TTL_SECONDS}; HttpOnly; Secure; SameSite=None`);
   res.json({ ok: true, next: "/getkey?done=" + n });
 }));
+
+// Build marker so you can confirm which version Vercel is actually running.
+app.get("/version", (req, res) => res.json({ build: "cp-verify-v3", checkpoints: CHECKPOINTS.length }));
 
 // Old link still works
 app.get("/generate-key", (req, res) => res.redirect("/getkey"));
