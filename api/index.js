@@ -34,7 +34,7 @@ const SITE_NAME = "ObsessionHub";             // shown at the top of every page
 // Linkvertise dashboard for each link (that is Linkvertise's own server-side protection).
 const CHECKPOINTS = [
   "https://direct-link.net/10011031/B72fEGbf5kYG",   // Checkpoint 1  -> target /checkpoint/1
-  "https://link-hub.net/10011031/Cmbzeav4ae57",   // Checkpoint 2  -> target /checkpoint/2
+  "https://link-hub.net/10011031/Cmbzeav4ae57",      // Checkpoint 2  -> target /checkpoint/2
   "https://direct-link.net/10011031/hyRI1in6PVqp",   // Checkpoint 3  -> target /checkpoint/3
 ];
 const MIN_SECONDS_PER_CHECKPOINT = 10;        // finishing faster than this = bypass
@@ -61,7 +61,7 @@ const KEY_TTL_SECONDS = 5 * 60 * 60;          // free key lifetime (5 hours)
 const RESET_COOLDOWN_SECONDS = 12 * 60 * 60;  // user HWID reset cooldown
 const MAX_KEYS_PER_IP_PER_DAY = 5;
 // Domains users are allowed to return from. Linkvertise redirects through several of these.
-const ALLOWED_REFERRERS = ["lootlabs.gg", "work.ink", "linkvertise.com", "link-to.net", "linkvertise.net", "publisher.linkvertise.com"];
+const ALLOWED_REFERRERS = ["lootlabs.gg", "work.ink", "linkvertise.com", "linkvertise.net", "link-to.net", "link-hub.net", "direct-link.net", "publisher.linkvertise.com"];
 const ADMIN_SECRET = process.env.ADMIN_SECRET || "";
 
 // ===== HOME PAGE CONTENT (edit these) =====
