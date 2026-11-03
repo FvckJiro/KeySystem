@@ -20,9 +20,9 @@
 --========================[ CONFIG — EDIT THIS ]========================--
 local Config = {
     Website   = "https://keysystem-orcin-sigma.vercel.app/",      -- your key site (NO trailing slash)
-    GetKeyURL = "https://your-site.vercel.app/getkey", -- where users get a key
-    Discord   = "https://discord.gg/YOUR-INVITE",      -- "" to hide the button
-    Youtube   = "https://youtube.com/@YOUR-CHANNEL",    -- "" to hide the button
+    GetKeyURL = "https://keysystem-orcin-sigma.vercel.app/getkey", -- where users get a key
+    Discord   = "https://discord.gg/Qy8W4JHQ4n",      -- "" to hide the button
+    Youtube   = "https://www.youtube.com/@jirombv",    -- "" to hide the button
 
     RememberKey = true,   -- save the key on this device so users don't retype it
     CloseAfterLoad = true, -- close the window after a script loads
