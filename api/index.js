@@ -33,8 +33,9 @@ const SITE_NAME = "ObsessionHub";             // shown at the top of every page
 // For Linkvertise: create the link with that target, then turn ON "Anti-Bypass" in the
 // Linkvertise dashboard for each link (that is Linkvertise's own server-side protection).
 const CHECKPOINTS = [
-  "https://work.ink/2omP/checkpoint-1",   // Checkpoint 1  -> target /checkpoint/1
-  "https://work.ink/2omP/checkpoint--2",   // Checkpoint 2  -> target /checkpoint/2
+  "https://work.ink/2omP/checkpoint-1",    // Checkpoint 1
+  "https://work.ink/2omP/checkpoint--2",   // Checkpoint 2
+  "https://work.ink/2omP/checkpoint3",     // Checkpoint 3
 ];
 const MIN_SECONDS_PER_CHECKPOINT = 10;        // finishing faster than this = bypass
 const REQUIRE_REFERER = true;                 // require coming back from an allowed ad site (below)
@@ -1403,6 +1404,17 @@ app.get("/getkey", wrap(async (req, res) => {
   const s = existing || (await newSession(req, res));
   // Re-anchor the cookie on every load (also covers sessions resumed via ?s= when the cookie was dropped).
   res.setHeader("Set-Cookie", cookieHeader(s.sid));
+
+  // Restart on leave: a FRESH visit to /getkey (no ?s= and no ?done=, i.e. not part of the active
+  // flow or the ad round-trip) wipes mid-progress back to Checkpoint 1. So if someone does a
+  // checkpoint, leaves the site, and comes back later, they start over instead of resuming.
+  const inFlow = !!(req.query && (str(req.query.s) || req.query.done));
+  if (!inFlow && s.step > 0 && s.step < total) {
+    await patchSession(s.sid, { step: 0, startedAt: 0, pending: 0, challenge: "", chAt: 0, armed: 0 });
+    s.step = 0; s.startedAt = 0; s.pending = 0; s.challenge = ""; s.armed = 0;
+    await trace(req, `getkey FRESH visit with mid-progress -> reset to 0`);
+  }
+
   await trace(req, `getkey sid=${s.sid.slice(0, 6)} step=${s.step}${existing ? "" : " (NEW session)"} q.s=${req.query && req.query.s ? str(req.query.s).slice(0, 6) : "-"} done=${req.query.done || "-"}`);
   const justDone = parseInt(req.query.done, 10);
   const celebrate = justDone >= 1 && justDone <= s.step;
@@ -1480,6 +1492,11 @@ app.get("/getkey", wrap(async (req, res) => {
     <p class="muted" style="margin:-2px 0 0">${s.step} of ${total} complete · ${pct}%</p>
     ${ring(s.step, total, `<b>${s.step}/${total}</b><small>COMPLETE</small>`)}
     <a class="btn go wait" id="go" href="/go/${next}?s=${s.sid}" data-label="Start Checkpoint ${next} →" data-celeb="${celebrate ? 1 : 0}"><span>Preparing checkpoint...</span></a>
+    <div id="adwarn" hidden style="margin-top:14px;padding:14px;border-radius:12px;background:rgba(139,10,26,.35);box-shadow:inset 0 0 0 1px rgba(255,59,78,.5);text-align:left">
+      <b style="color:#ff8a96">Ad blocker / bypass tool detected</b>
+      <p class="muted" style="font-size:.82rem;margin:6px 0 10px">Turn off your ad blocker or bypass extension, then recheck. The checkpoints won't load otherwise.</p>
+      <button id="recheck" class="ghost" style="width:100%;margin:0">Recheck</button>
+    </div>
     <p class="muted" style="font-size:.8rem;margin-top:12px">Finish the page that opens and you'll come back here automatically.<br>Bypassers are detected and reset your progress.</p>
     <div class="warp" id="warp"><div class="spin"></div><b>Entering Checkpoint ${next}</b><small>Hold tight...</small></div>
     ${celebrate ? toast(`Checkpoint ${justDone} complete!`) : retried ? toast(`Let's try Checkpoint ${next} again`) : ""}
@@ -1487,14 +1504,62 @@ app.get("/getkey", wrap(async (req, res) => {
       (function(){
         ["warp", "toast"].forEach(function(id){ var e = document.getElementById(id); if (e) document.body.appendChild(e); });
         var go = document.getElementById("go"), label = go.querySelector("span");
+        var adwarn = document.getElementById("adwarn"), blocked = false;
+
+        // --- Ad blocker / bypass-tool detection ---
+        // Two independent signals: (1) a bait element that blockers hide/remove by its ad-like class,
+        // and (2) a script named like an ad that blockers refuse to load. Either one => blocked.
+        function baitHidden(){
+          var bait = document.createElement("div");
+          bait.className = "ad-banner ads adsbox ad-placement pub_300x250 adsbygoogle";
+          bait.style.cssText = "position:absolute;left:-9999px;top:-9999px;height:12px;width:12px;pointer-events:none";
+          bait.innerHTML = "&nbsp;";
+          document.body.appendChild(bait);
+          var hidden = bait.offsetHeight === 0 || bait.offsetParent === null ||
+            getComputedStyle(bait).display === "none" || getComputedStyle(bait).visibility === "hidden";
+          bait.remove();
+          return hidden;
+        }
+        function scriptBlocked(cb){
+          var sc = document.createElement("script");
+          sc.src = "/ads.js?_=" + Date.now();
+          window.__adsok = false;
+          sc.onload = function(){ cb(window.__adsok !== true); };
+          sc.onerror = function(){ cb(true); };
+          document.head.appendChild(sc);
+          setTimeout(function(){ cb(window.__adsok !== true); }, 1500); // fallback if neither fires
+        }
+        function applyBlocked(isBlocked){
+          blocked = isBlocked;
+          if (isBlocked){
+            adwarn.hidden = false;
+            go.classList.add("wait"); go.classList.remove("ready");
+            label.textContent = "Disable ad blocker to continue";
+          } else {
+            adwarn.hidden = true;
+            go.classList.remove("wait"); go.classList.add("ready");
+            label.textContent = go.dataset.label;
+          }
+        }
+        var checked = false;
+        function runCheck(){
+          var bh = baitHidden();
+          scriptBlocked(function(sb){
+            if (checked) return; checked = true;
+            applyBlocked(bh || sb);
+          });
+        }
+        document.getElementById("recheck").addEventListener("click", function(){ checked = false; runCheck(); });
+
+        // Reveal/enable the Start button after the short arm delay, then run the ad-block check.
         setTimeout(function(){
-          go.classList.remove("wait"); go.classList.add("ready");
-          label.textContent = go.dataset.label;
+          if (!blocked){ go.classList.remove("wait"); go.classList.add("ready"); label.textContent = go.dataset.label; }
+          runCheck();
         }, 3000);
+
         go.addEventListener("click", function(e){
           e.preventDefault();
-          if (go.classList.contains("wait")) return;
-         
+          if (go.classList.contains("wait") || blocked) return;
           document.getElementById("warp").classList.add("on");
           setTimeout(function(){ location.href = go.href; }, 750);
         });
@@ -1746,8 +1811,14 @@ app.post("/checkpoint/verify", wrap(async (req, res) => {
   res.json({ ok: true, next: "/getkey?done=" + n + "&s=" + sid });
 }));
 
+// Ad-blocker bait: named like an ad so blockers refuse it. If it loads, no blocker is active.
+app.get("/ads.js", (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.type("application/javascript").send("window.__adsok=true;");
+});
+
 // Build marker so you can confirm which version Vercel is actually running.
-app.get("/version", (req, res) => res.json({ build: "cp-jsonsession-v9b", checkpoints: CHECKPOINTS.length }));
+app.get("/version", (req, res) => res.json({ build: "cp-restart-v11", checkpoints: CHECKPOINTS.length }));
 
 // Debug: the server's step-by-step log of what happened on your recent requests (newest first).
 app.get("/trace", wrap(async (req, res) => {
@@ -1770,9 +1841,9 @@ app.get("/whoami", wrap(async (req, res) => {
   });
 }));
 
-// Start completely fresh (clears your session + IP bridge) so you re-do every checkpoint.
-// Handy for testing. Real users never need it.
-app.get("/reset", wrap(async (req, res) => {
+// Start completely fresh (clears your checkpoint session + IP bridge) so you re-do every checkpoint.
+// Handy for testing. NOTE: this is /clear, NOT /reset -- /reset is the public "Reset HWID" page.
+app.get("/clear", wrap(async (req, res) => {
   const s = await getSession(req);
   const cookieSid = getCookie(req, "ks_sid");
   try {
