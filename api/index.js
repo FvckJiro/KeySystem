@@ -94,7 +94,10 @@ const GAMES = [
 
 // Add your scripts here. status: "Working", "Updating" or "Patched"
 const SCRIPTS = [
-  // { name: "Script Name", game: "Game Name", description: "What it does", status: "Working", link: "https://..." },
+  // One entry is fine for a loader. A single script shows CENTERED on the page.
+  // name = label shown, link = where it opens (your loader raw URL), leave link off for no button.
+  { name: "ObsessionHub Loader", copy: `loadstring(game:HttpGet("https://gist.githubusercontent.com/LazyJiroHub/2fe45c893269a0ba7747dab4e8637d02/raw/7077896e6f4383a970f7712dbf5d4e4fdb1d89bf/PD4"))()` },
+  // Add more like: { name: "Another Script", copy: 'loadstring(...)()' }  or  { name: "Soon Script", soon: true }
 ];
 
 // Add your executors here. status: "Working", "Updating" or "Down"
@@ -689,7 +692,15 @@ a.grow:hover{transform:translateX(3px);box-shadow:inset 0 0 0 1px rgba(255,59,78
 .grow.soon{opacity:.8}
 .grow.soon .ck{color:var(--muted);box-shadow:inset 0 0 0 2px rgba(150,124,131,.4)}
 .grow .nm{font-weight:700;font-size:1.02rem;color:#fff}
+.grow .nm.code{flex:1;min-width:0;font-family:ui-monospace,"JetBrains Mono",monospace;font-weight:500;font-size:.82rem;color:#ffd6db;white-space:nowrap;overflow-x:auto;overflow-y:hidden;padding-bottom:2px}
+.grow .nm.code::-webkit-scrollbar{height:5px}
+.grow .nm.code::-webkit-scrollbar-thumb{background:rgba(255,59,78,.5);border-radius:3px}
+.grow .nm.code{scrollbar-width:thin;scrollbar-color:rgba(255,59,78,.5) transparent}
 .grow .soonbadge{margin-left:auto;font-size:.66rem;font-weight:800;letter-spacing:.12em;color:#ff6b7a;padding:6px 13px;border-radius:7px;box-shadow:inset 0 0 0 1.5px rgba(255,59,78,.55)}
+button.grow{width:100%;border:0;cursor:pointer;font:inherit;text-align:left}
+.grow .copybadge{margin-left:auto;font-size:.66rem;font-weight:800;letter-spacing:.12em;color:#fff;padding:6px 14px;border-radius:7px;background:linear-gradient(20deg,var(--red2),var(--deep));box-shadow:0 0 14px rgba(255,59,78,.35)}
+.grow.copied .copybadge{background:linear-gradient(20deg,#21c17a,#0f7a4c);box-shadow:0 0 14px rgba(33,193,122,.4)}
+.glist.one{grid-template-columns:1fr;max-width:460px}
 @media(max-width:620px){.glist{grid-template-columns:1fr;padding:16px}}
 .more{display:inline-block;margin-top:18px;font-weight:600;text-decoration:none}
 .more:hover{text-decoration:underline}
@@ -939,7 +950,7 @@ const executorTile = (e, i) => `
 
 const LISTS = {
   games: { title: "Supported Games", nav: "Games", sub: "Every game our scripts support.", items: () => GAMES, tile: gameTile, empty: "Game coming soon", icon: "game" },
-  scripts: { title: "Scripts", nav: "Scripts", sub: "All our scripts and their current status.", items: () => SCRIPTS, tile: scriptTile, empty: "Script coming soon", icon: "code" },
+  scripts: { title: "Scripts", nav: "Scripts", sub: "All scripts are in the loader.", items: () => SCRIPTS, tile: scriptTile, empty: "Script coming soon", icon: "code" },
   executors: { title: "Executors", nav: "Executors", sub: "Executors that work with our scripts.", items: () => EXECUTORS, tile: executorTile, empty: "Executor coming soon", icon: "bolt", emptyCount: 3 },
 };
 
@@ -1007,22 +1018,34 @@ function listPage(kind) {
   }
 
   let body;
-  if (kind === "games") {
+  if (kind === "games" || kind === "scripts") {
     // checklist design: ✓ for supported, "COMING SOON" for the rest.
     // Entries can be a plain name string, or { name, soon?, link? }.
     const rows = items.map(it => {
       const g = typeof it === "string" ? { name: it } : it;
       const soon = g.soon === true || /soon|unsupported|unsupport|wip/i.test(g.status || "");
+      const badge = soon ? `<span class="soonbadge">COMING SOON</span>`
+        : (g.copy ? `<span class="copybadge">COPY</span>` : "");
       const inner = `
         <span class="ck">${soon ? "–" : ICONS.check}</span>
         <span class="nm">${esc(g.name)}</span>
-        ${soon ? `<span class="soonbadge">COMING SOON</span>` : ""}`;
+        ${badge}`;
+      // Script with a loadstring -> show the loadstring itself (not the name) and copy it on click.
+      if (g.copy && !soon) {
+        const codeInner = `
+          <span class="ck">${ICONS.check}</span>
+          <span class="nm code">${esc(g.copy)}</span>
+          <span class="copybadge">COPY</span>`;
+        return `<button type="button" class="grow ok copyrow" data-q="${searchText(g.name + " " + g.copy)}" data-copy="${esc(g.copy)}">${codeInner}</button>`;
+      }
       return safeUrl(g.link) && !soon
         ? `<a class="grow ok" data-q="${searchText(g.name)}" href="${esc(g.link)}" target="_blank" rel="noopener">${inner}</a>`
         : `<div class="grow ${soon ? "soon" : "ok"}" data-q="${searchText(g.name)}">${inner}</div>`;
     }).join("");
+    // Single item (e.g. just your loader) -> center it with the "one" variant.
+    const oneCls = items.length === 1 ? " one" : "";
     body = items.length
-      ? `<div class="glist">${rows}</div>`
+      ? `<div class="glist${oneCls}">${rows}</div>`
       : `<div class="tiles">${emptyTiles(L.empty, L.emptyCount)}</div>`;
   } else if (kind === "executors") {
     const pc = items.filter(e => !isMobileExec(e));
@@ -1073,6 +1096,18 @@ function listPage(kind) {
         };
       });
     }
+    // copy loadstring rows (scripts)
+    document.querySelectorAll(".copyrow").forEach(function(row){
+      var badge = row.querySelector(".copybadge"), orig = badge ? badge.textContent : "";
+      row.addEventListener("click", function(){
+        var code = row.dataset.copy || "";
+        function done(){ row.classList.add("copied"); if (badge) badge.textContent = "COPIED"; setTimeout(function(){ row.classList.remove("copied"); if (badge) badge.textContent = orig; }, 1600); }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(code).then(done).catch(function(){ fallback(); });
+        } else { fallback(); }
+        function fallback(){ var t = document.createElement("textarea"); t.value = code; t.style.position = "fixed"; t.style.opacity = "0"; document.body.appendChild(t); t.select(); try { document.execCommand("copy"); } catch(e){} t.remove(); done(); }
+      });
+    });
     // search
     var q = document.getElementById("q"); if (!q) return;
     var tiles = document.querySelectorAll("#listwrap [data-q]"), none = document.getElementById("none");
@@ -1817,7 +1852,7 @@ app.get("/ads.js", (req, res) => {
 });
 
 // Build marker so you can confirm which version Vercel is actually running.
-app.get("/version", (req, res) => res.json({ build: "cp-restart-v11b", checkpoints: CHECKPOINTS.length }));
+app.get("/version", (req, res) => res.json({ build: "cp-scripts-v12f", checkpoints: CHECKPOINTS.length }));
 
 // Debug: the server's step-by-step log of what happened on your recent requests (newest first).
 app.get("/trace", wrap(async (req, res) => {
