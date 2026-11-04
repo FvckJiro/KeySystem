@@ -51,6 +51,8 @@ local Config = {
         { name = "Deep Fishing",   url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/DeepFishing.lua",       requiresKey = true, placeIds = { 132239307080610 } },
         { name = "Gun Forge",   url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/GunForge.lua",       requiresKey = true, placeIds = { 75687962646869, 10766957927 } },
         { name = "Vabrant Survival",   url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/VabrantSurvival.lua",       requiresKey = true, placeIds = { 100283815455755, 9224753153 } },
+        { name = "Project Delta",   url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/ProjectDeltaPremium.lua",       requiresKey = true, placeIds = { 7336302630, 2862098693 } },
+        { name = "Loot To Forge",   url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/LootToForge.lua",       requiresKey = true, placeIds = { 118805555015549 } },
         
     },
 
