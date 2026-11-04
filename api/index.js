@@ -103,8 +103,8 @@ const SCRIPTS = [
 const EXECUTORS = [
   { name: "Swift", platform: "Windows", price: "Free", status: "Working", description: "A modern Roblox development workspace for scripting, testing, and managing projects in one focused IDE..", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/real.png", link: "https://projectreal.gg/" },
   { name: "Wave", platform: "Windows", price: "Paid", status: "Working", description: "One of the best free executor rn.", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/madium.png", link: "https://getmadium.net/" },
-  { name: "Delta", platform: "Android", price: "Free", status: "Working", description: "Popular free mobile executor for Android. Easy setup.", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/delta.jpg", link: "https://your-download-link.com/delta" },
-  { name: "Codex", platform: "iOS", price: "Free", status: "Working", description: "Free iOS executor for iPhone and iPad. No jailbreak needed.", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/arceus.png", link: "https://your-download-link.com/codex" },
+  { name: "Delta", platform: "Android", price: "Free", status: "Working", description: "Popular free mobile executor for iOs And Android. Easy setup.", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/delta.jpg", link: "https://deltaexploits.gg/delta-executor" },
+  { name: "Codex", platform: "iOS", price: "Free", status: "Working", description: "Free executor for iPhone and Android. No key needed.", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/arceus.png", link: "https://spdmteam.com/index" },
 ];
 
 // FAQ on the home page: [question, answer]
