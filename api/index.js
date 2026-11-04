@@ -1226,6 +1226,18 @@ function getCookie(req, name) {
 // cookies -- which was causing progress to reset to Checkpoint 1 on mobile/in-app browsers.
 const cookieHeader = sid => `ks_sid=${sid}; Path=/; Max-Age=${SESSION_TTL_SECONDS}; HttpOnly; Secure; SameSite=Lax`;
 
+// Lightweight per-IP trace log so we can see exactly what the server did on a real run.
+// View it at /trace. Capped and expiring; never affects the flow (errors swallowed).
+async function trace(req, msg) {
+  try {
+    const ip = getIp(req);
+    const t = new Date().toISOString().slice(11, 19);
+    await redis.lpush("trace:" + ip, t + " | " + msg);
+    await redis.ltrim("trace:" + ip, 0, 60);
+    await redis.expire("trace:" + ip, 3600);
+  } catch (e) {}
+}
+
 function hydrate(sid, s) {
   if (!s) return null;
   return {
@@ -1363,9 +1375,11 @@ app.get("/getkey", wrap(async (req, res) => {
       <a class="btn" href="/">Back Home</a>${socials()}`, "clock"));
   }
 
-  const s = (await getSession(req)) || (await newSession(req, res));
+  const existing = await getSession(req);
+  const s = existing || (await newSession(req, res));
   // Re-anchor the cookie on every load (also covers sessions resumed via ?s= when the cookie was dropped).
   res.setHeader("Set-Cookie", cookieHeader(s.sid));
+  await trace(req, `getkey sid=${s.sid.slice(0, 6)} step=${s.step}${existing ? "" : " (NEW session)"} q.s=${req.query && req.query.s ? str(req.query.s).slice(0, 6) : "-"} done=${req.query.done || "-"}`);
   const justDone = parseInt(req.query.done, 10);
   const celebrate = justDone >= 1 && justDone <= s.step;
   const retried = req.query.retry === "1";
@@ -1470,10 +1484,14 @@ app.get("/go/:n", wrap(async (req, res) => {
   if (await isBanned(req)) return res.status(403).send(bannedPage());
   const n = parseInt(req.params.n, 10);
   const s = await getSession(req);
-  if (!s || n !== s.step + 1 || !CHECKPOINTS[n - 1]) return res.redirect("/getkey");
+  if (!s || n !== s.step + 1 || !CHECKPOINTS[n - 1]) {
+    await trace(req, `go n=${n} REJECTED (s=${!!s} step=${s ? s.step : "?"}) -> /getkey`);
+    return res.redirect("/getkey");
+  }
   // Record WHICH checkpoint this is (armed). The return leg will use this, not the URL number,
   // so a work.ink link whose destination points at the wrong /checkpoint/N can't break the flow.
   await redis.hset("session:" + s.sid, { armed: n, startedAt: Date.now(), pending: 0, challenge: "", chAt: 0 });
+  await trace(req, `go n=${n} sid=${s.sid.slice(0, 6)} armed->${n} -> ${CHECKPOINTS[n - 1]}`);
   // IP bridge: the return leg from the ad network (/checkpoint/N) has no ?s= and may arrive with no
   // cookie, so remember which session this IP just launched. Short TTL, used only to resume the flow.
   await redis.set("ipsess:" + getIp(req), s.sid, { ex: 20 * 60 });
@@ -1580,6 +1598,7 @@ async function handleCheckpointReturn(req, res) {
   }
 
   if (!s) {
+    await trace(req, "checkpoint RETURN -> NO SESSION (blocked)");
     await addStrike(req);
     return res.status(403).send(bypassPage("No checkpoint session found. Checkpoints must be started from this site."));
   }
@@ -1587,36 +1606,41 @@ async function handleCheckpointReturn(req, res) {
   res.setHeader("Set-Cookie", cookieHeader(s.sid));
 
   const total = CHECKPOINTS.length;
-  if (s.step >= total) return res.redirect("/getkey?s=" + s.sid); // all done -> go claim the key
+  const via = (req.query && SID_RE.test(str(req.query.s))) ? "url" : (SID_RE.test(getCookie(req, "ks_sid")) ? "cookie" : "ipbridge");
+  await trace(req, `checkpoint RETURN sid=${s.sid.slice(0, 6)} via=${via} step=${s.step} armed=${s.armed} pending=${s.pending}`);
+
+  if (s.step >= total) { await trace(req, "-> already done, redirect to key"); return res.redirect("/getkey?s=" + s.sid); }
 
   // The checkpoint being completed is ALWAYS the user's next one, by their progress.
   const target = s.step + 1;
 
   // Already passed this checkpoint and waiting to verify (e.g. refreshed the page) -> resume.
   if (s.pending === target && s.challenge) {
+    await trace(req, `-> resume verify for cp${target}`);
     await redis.hset("session:" + s.sid, { chAt: Date.now() });
     return res.send(verifyPage(s.step, target, s.challenge));
   }
 
   // SOFT fail: send back to Get Key to retry (no strike -- not proof of a bypass tool).
-  const softFail = async () => {
+  const softFail = async why => {
+    await trace(req, `-> SOFT FAIL (${why}) armed=${s.armed} target=${target} startedAt=${s.startedAt}`);
     await redis.hset("session:" + s.sid, { startedAt: 0, pending: 0, challenge: "", chAt: 0 });
     res.redirect("/getkey?retry=1&s=" + s.sid);
   };
 
   // Must have STARTED this exact checkpoint from our site (prevents replaying one ad to skip
   // another). armed is set by /go and cleared on success.
-  if (s.armed !== target) return softFail();
+  if (s.armed !== target) return softFail("armed!=target");
 
   // Timing: arm if missing (ad networks drop round-trip state); reject suspiciously instant returns.
   if (!s.startedAt) {
     await redis.hset("session:" + s.sid, { startedAt: Date.now() });
   } else if ((Date.now() - s.startedAt) / 1000 < MIN_SECONDS_PER_CHECKPOINT) {
-    return softFail();
+    return softFail("too fast " + Math.round((Date.now() - s.startedAt) / 1000) + "s");
   }
 
   // Lenient referrer check: missing is allowed; only retry a referrer that's clearly not an ad domain.
-  if (REQUIRE_REFERER && req.headers.referer && !isAllowedReferer(req.headers.referer)) return softFail();
+  if (REQUIRE_REFERER && req.headers.referer && !isAllowedReferer(req.headers.referer)) return softFail("bad referer " + req.headers.referer);
 
   // HARD anti-bypass (optional): RED-SQUARE verdict. Fail-open; disabled unless REDSQUARE_API_KEY set.
   if (REDSQUARE_ENABLED) {
@@ -1634,6 +1658,7 @@ async function handleCheckpointReturn(req, res) {
   const challenge = "c" + crypto.randomBytes(12).toString("hex");
   await redis.hset("session:" + s.sid, { pending: target, challenge, chAt: Date.now(), startedAt: 0 });
   await redis.set("chal:" + challenge, s.sid + "|" + target + "|" + Date.now(), { ex: 15 * 60 });
+  await trace(req, `-> issued challenge for cp${target}, showing verify`);
   res.send(verifyPage(s.step, target, challenge));
 }
 app.get("/checkpoint/:n", wrap(handleCheckpointReturn));
@@ -1649,22 +1674,23 @@ app.post("/checkpoint/verify", wrap(async (req, res) => {
   // Look the challenge up in its index. This is the single source of truth: if it exists, a real
   // checkpoint page issued it (so the gate was passed) and it hasn't been used yet. We do NOT rely
   // on the session cookie or its pending flag, which can be dropped or reset in the ad round-trip.
-  if (!/^c[a-f0-9]{24}$/.test(postedCh)) return res.json({ ok: false, reason: "No checkpoint is waiting for verification." });
+  if (!/^c[a-f0-9]{24}$/.test(postedCh)) { await trace(req, "VERIFY reject: bad/empty ch"); return res.json({ ok: false, reason: "No checkpoint is waiting for verification." }); }
   const meta = str(await redis.get("chal:" + postedCh));
   const parts = meta.split("|");
   const sid = parts[0] || "";
   const n = Number(parts[1]) || 0;
   const issuedAt = Number(parts[2]) || 0;
-  if (!SID_RE.test(sid) || n < 1) return res.json({ ok: false, reason: "No checkpoint is waiting for verification." });
+  if (!SID_RE.test(sid) || n < 1) { await trace(req, `VERIFY reject: chal not found (meta='${meta}')`); return res.json({ ok: false, reason: "No checkpoint is waiting for verification." }); }
 
   const h = await redis.hgetall("session:" + sid);
   const step = h ? Number(h.step) || 0 : 0;
   if (!h || n !== step + 1) {
-    // Already advanced (replay / double-submit) or out of order.
+    await trace(req, `VERIFY reject: n=${n} step=${step} (already advanced/out of order)`);
     return res.json({ ok: false, reason: "No checkpoint is waiting for verification." });
   }
 
   const fail = async reason => {
+    await trace(req, `VERIFY FAIL cp${n}: ${reason}`);
     await redis.del("chal:" + postedCh);
     await redis.hset("session:" + sid, { pending: 0, challenge: "", chAt: 0 });
     await addStrike(req);
@@ -1687,6 +1713,7 @@ app.post("/checkpoint/verify", wrap(async (req, res) => {
   // same completed ad can't be replayed to skip the next checkpoint.
   await redis.del("chal:" + postedCh);
   await redis.hset("session:" + sid, { step: n, pending: 0, challenge: "", chAt: 0, armed: 0 });
+  await trace(req, `VERIFY OK cp${n} sid=${sid.slice(0, 6)} step->${n}, next=/getkey?done=${n}`);
   // Re-anchor the cookie to this session so the next checkpoint's Get Key page tracks it, even if
   // the ad round-trip landed the verify POST in a different cookie context.
   res.setHeader("Set-Cookie", cookieHeader(sid));
@@ -1696,7 +1723,13 @@ app.post("/checkpoint/verify", wrap(async (req, res) => {
 }));
 
 // Build marker so you can confirm which version Vercel is actually running.
-app.get("/version", (req, res) => res.json({ build: "cp-progressdriven-v7", checkpoints: CHECKPOINTS.length }));
+app.get("/version", (req, res) => res.json({ build: "cp-trace-v8", checkpoints: CHECKPOINTS.length }));
+
+// Debug: the server's step-by-step log of what happened on your recent requests (newest first).
+app.get("/trace", wrap(async (req, res) => {
+  const log = await redis.lrange("trace:" + getIp(req), 0, 60);
+  res.type("text/plain").send((log || []).join("\n") || "(no events yet — do a run, then refresh this page)");
+}));
 
 // Debug: shows how the server resolves your session right now (cookie vs URL vs IP bridge).
 app.get("/whoami", wrap(async (req, res) => {
