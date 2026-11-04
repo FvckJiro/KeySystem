@@ -78,6 +78,7 @@ const YOUTUBE_URL = "https://www.youtube.com/@jirombv";      // your YouTube cha
 const GAMES = [
   "Anime Dice",
   "Death Ball",
+  "Indo Voice",
   "Break And Steal Egg",
   "Deep Fishing",
   "Loot To Forge",
