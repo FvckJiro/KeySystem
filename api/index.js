@@ -961,7 +961,7 @@ function siteNav(active) {
   <a class="logo" href="/">${logo}</a>
   <button class="menu-btn" type="button" aria-label="Menu" onclick="document.body.classList.toggle('menu-open')"><span></span><span></span><span></span></button>
   <div class="links">
-    ${link("/", "Home", "home")}${link("/games", "Games", "games")}${link("/scripts", "Scripts", "scripts")}${link("/executors", "Executors", "executors")}${link("/checker", "Key Checker", "checker")}${link("/reset", "Reset HWID", "reset")}
+    ${link("/", "Home", "home")}${link("/games", "Games", "games")}${link("/executors", "Executors", "executors")}${link("/checker", "Key Checker", "checker")}${link("/reset", "Reset HWID", "reset")}
     <a href="/getkey" class="nav-cta">Get Key</a>
   </div>
 </div></nav>`;
@@ -972,7 +972,7 @@ function siteFooter() {
   return `<footer>
     <div class="logo" style="justify-content:center">${logo}</div>
     <div class="foot-soc">${socials().replace('class="socials"', 'class="socials" style="border:0;margin:0;padding:0"')}</div>
-    <div><a href="/games">Games</a><a href="/scripts">Scripts</a><a href="/executors">Executors</a><a href="/checker">Key Checker</a><a href="/getkey">Get Key</a></div>
+    <div><a href="/games">Games</a><a href="/executors">Executors</a><a href="/checker">Key Checker</a><a href="/getkey">Get Key</a></div>
     <div style="margin-top:12px;font-size:.8rem">© ${new Date().getFullYear()} ${esc(SITE_NAME)}</div>
   </footer>`;
 }
@@ -1003,6 +1003,27 @@ ${REVEAL_JS}${extraJs}
 
 // An executor counts as "mobile" when its platform/name mentions a mobile OS
 const isMobileExec = e => /android|ios|iphone|ipad|mobile|phone|arm/i.test(((e.platform || "") + " " + (e.name || "")));
+
+// The loader section (shown on the Games page): a heading + the loadstring row(s) to copy.
+function loaderBlock() {
+  const loaders = SCRIPTS.filter(s => s && typeof s === "object" && s.copy);
+  if (!loaders.length) return "";
+  const rows = loaders.map(g => {
+    const inner = `
+      <span class="ck">${ICONS.check}</span>
+      <span class="nm code">${esc(g.copy)}</span>
+      <span class="copybadge">COPY</span>`;
+    return `<button type="button" class="grow ok copyrow" data-copy="${esc(g.copy)}">${inner}</button>`;
+  }).join("");
+  return `
+    <div class="loadersec" style="margin:0 0 30px">
+      <div style="text-align:center;margin:0 0 14px">
+        <h2 style="font-size:1.5rem;font-weight:800;color:#fff">The Loader</h2>
+        <p class="muted" style="margin-top:6px">All scripts are in the loader — copy this and paste it into your executor.</p>
+      </div>
+      <div class="glist${loaders.length === 1 ? " one" : ""}">${rows}</div>
+    </div>`;
+}
 
 function listPage(kind) {
   const L = LISTS[kind], items = L.items();
@@ -1044,9 +1065,11 @@ function listPage(kind) {
     }).join("");
     // Single item (e.g. just your loader) -> center it with the "one" variant.
     const oneCls = items.length === 1 ? " one" : "";
-    body = items.length
+    const list = items.length
       ? `<div class="glist${oneCls}">${rows}</div>`
       : `<div class="tiles">${emptyTiles(L.empty, L.emptyCount)}</div>`;
+    // Games page: show the loader (with its loadstring to copy) ABOVE the supported-games list.
+    body = kind === "games" ? loaderBlock() + list : list;
   } else if (kind === "executors") {
     const pc = items.filter(e => !isMobileExec(e));
     const mob = items.filter(isMobileExec);
@@ -1241,7 +1264,7 @@ app.get("/", (req, res) => {
   res.send(homePage());
 });
 app.get("/games", (req, res) => res.send(listPage("games")));
-app.get("/scripts", (req, res) => res.send(listPage("scripts")));
+app.get("/scripts", (req, res) => res.redirect("/games")); // scripts merged into the Games page
 app.get("/executors", (req, res) => res.send(listPage("executors")));
 
 // ===== CHECKPOINT SESSIONS & ANTI-BYPASS =====
@@ -1852,7 +1875,7 @@ app.get("/ads.js", (req, res) => {
 });
 
 // Build marker so you can confirm which version Vercel is actually running.
-app.get("/version", (req, res) => res.json({ build: "cp-scripts-v12f", checkpoints: CHECKPOINTS.length }));
+app.get("/version", (req, res) => res.json({ build: "cp-loader-top-v13b", checkpoints: CHECKPOINTS.length }));
 
 // Debug: the server's step-by-step log of what happened on your recent requests (newest first).
 app.get("/trace", wrap(async (req, res) => {
