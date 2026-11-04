@@ -289,6 +289,24 @@ corner(root, 18)
 root.ClipsDescendants = true
 strokeOf(root, T.stroke, 1)
 
+-- ===== dark-red outer glow (wraps the card on both sides and underneath) =====
+local outerGlow = Instance.new("ImageLabel")
+outerGlow.Name = "OuterGlow"
+outerGlow.AnchorPoint = Vector2.new(0.5, 0.5)
+outerGlow.BackgroundTransparency = 1
+outerGlow.Image = "rbxassetid://1316045217"             -- soft 9-slice glow
+outerGlow.ScaleType = Enum.ScaleType.Slice
+outerGlow.SliceCenter = Rect.new(10, 10, 118, 118)
+outerGlow.ImageColor3 = Color3.fromRGB(120, 8, 20)      -- dark red
+outerGlow.ImageTransparency = 0.1
+outerGlow.ZIndex = 0                                    -- behind the card
+outerGlow.Parent = gui
+-- a second, tighter red layer for a richer glow
+local outerGlow2 = outerGlow:Clone()
+outerGlow2.ImageColor3 = Color3.fromRGB(200, 24, 48)
+outerGlow2.ImageTransparency = 0.28
+outerGlow2.Parent = gui
+
 -- responsive: scale the whole loader down to fit small / mobile screens
 local uiScale = Instance.new("UIScale", root)
 uiScale.Scale = 1
@@ -694,17 +712,44 @@ local getKeyBtn = Instance.new("TextButton")
 getKeyBtn.LayoutOrder = 6
 getKeyBtn.Size = UDim2.new(1, 0, 0, 42)
 getKeyBtn.BackgroundColor3 = T.red
-getKeyBtn.Text = "GET KEY"
-getKeyBtn.Font = Enum.Font.GothamBlack
-getKeyBtn.TextSize = 13
-getKeyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+getKeyBtn.Text = ""   -- text lives in a child label so the gradient doesn't darken it
 getKeyBtn.AutoButtonColor = true
+getKeyBtn.ClipsDescendants = true
 getKeyBtn.Parent = body
 corner(getKeyBtn, 10)
 gradient(getKeyBtn, T.red2, Color3.fromRGB(139, 10, 26), 20)
 do
     local gkGlow = Instance.new("UIStroke", getKeyBtn)
     gkGlow.Color = T.red2; gkGlow.Thickness = 1; gkGlow.Transparency = 0.3
+end
+-- GET KEY label (separate object = stays pure white, always readable)
+local getKeyLabel = Instance.new("TextLabel")
+getKeyLabel.BackgroundTransparency = 1
+getKeyLabel.Size = UDim2.fromScale(1, 1)
+getKeyLabel.Font = Enum.Font.GothamBlack
+getKeyLabel.Text = "GET KEY"
+getKeyLabel.TextSize = 13
+getKeyLabel.ZIndex = 3
+getKeyLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+getKeyLabel.Parent = getKeyBtn
+-- sweeping shine across the GET KEY button
+do
+    local gkShine = Instance.new("Frame")
+    gkShine.Size = UDim2.new(0, 36, 2, 0)
+    gkShine.Position = UDim2.fromScale(-0.3, -0.5)
+    gkShine.Rotation = 18
+    gkShine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    gkShine.BackgroundTransparency = 0.65
+    gkShine.BorderSizePixel = 0
+    gkShine.ZIndex = 2
+    gkShine.Parent = getKeyBtn
+    task.spawn(function()
+        while getKeyBtn.Parent do
+            gkShine.Position = UDim2.fromScale(-0.3, -0.5)
+            TweenService:Create(gkShine, TweenInfo.new(0.9, Enum.EasingStyle.Sine), { Position = UDim2.fromScale(1.3, -0.5) }):Play()
+            task.wait(3.1)
+        end
+    end)
 end
 getKeyBtn.MouseButton1Click:Connect(function()
     setClip(Config.GetKeyURL); notify("ObsessionHub", "Get-key link copied to clipboard", 5)
@@ -884,12 +929,58 @@ root.Size = UDim2.fromOffset(400, 0)
 TweenService:Create(root, TweenInfo.new(0.4, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
     { Size = UDim2.fromOffset(410, 552) }):Play()
 
--- rotating glow border + shifting background sheen
+-- keep the dark-red outer glow glued around the card (follows drag + scale), a touch lower for "under"
+local function syncGlow()
+    local sc = uiScale.Scale
+    local w, h = root.AbsoluteSize.X, root.AbsoluteSize.Y
+    if w < 10 then w, h = 410 * sc, 552 * sc end
+    outerGlow.Size = UDim2.fromOffset(w + 70 * sc, h + 78 * sc)
+    outerGlow.Position = root.Position + UDim2.fromOffset(0, 8 * sc)
+    outerGlow2.Size = UDim2.fromOffset(w + 34 * sc, h + 40 * sc)
+    outerGlow2.Position = root.Position + UDim2.fromOffset(0, 5 * sc)
+end
+pcall(syncGlow)
+
+-- rotating glow border + shifting background sheen + glow pulse
+local glowT = 0
 task.spawn(function()
     while gui.Parent do
         glowGrad.Rotation = (glowGrad.Rotation + 2) % 360
         sheenGrad.Rotation = (sheenGrad.Rotation + 0.4) % 360
+        glowT = glowT + 0.03
+        local pulse = (math.sin(glowT * 1.6) + 1) / 2          -- 0..1 breathing
+        outerGlow.ImageTransparency = 0.08 + pulse * 0.18
+        outerGlow2.ImageTransparency = 0.22 + pulse * 0.2
+        syncGlow()
         task.wait(0.03)
+    end
+end)
+
+-- ===== glossy shine sweeping across the whole card =====
+local cardShine = Instance.new("Frame")
+cardShine.Name = "CardShine"
+cardShine.Size = UDim2.new(0, 80, 2, 0)
+cardShine.Position = UDim2.fromScale(-0.4, -0.5)
+cardShine.Rotation = 18
+cardShine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+cardShine.BackgroundTransparency = 0.88
+cardShine.BorderSizePixel = 0
+cardShine.ZIndex = 60
+cardShine.Parent = root
+do
+    local sg = Instance.new("UIGradient", cardShine)
+    sg.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 1),
+        NumberSequenceKeypoint.new(0.5, 0),
+        NumberSequenceKeypoint.new(1, 1),
+    })
+    sg.Rotation = 90
+end
+task.spawn(function()
+    while root.Parent do
+        cardShine.Position = UDim2.fromScale(-0.4, -0.5)
+        TweenService:Create(cardShine, TweenInfo.new(1.3, Enum.EasingStyle.Sine), { Position = UDim2.fromScale(1.4, -0.5) }):Play()
+        task.wait(4.2)
     end
 end)
 
