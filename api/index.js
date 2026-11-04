@@ -35,7 +35,6 @@ const SITE_NAME = "ObsessionHub";             // shown at the top of every page
 const CHECKPOINTS = [
   "https://work.ink/2omP/checkpoint-1",    // Checkpoint 1
   "https://work.ink/2omP/checkpoint--2",   // Checkpoint 2
-  "https://work.ink/2omP/checkpoint3",     // Checkpoint 3
 ];
 const MIN_SECONDS_PER_CHECKPOINT = 10;        // finishing faster than this = bypass
 const REQUIRE_REFERER = true;                 // require coming back from an allowed ad site (below)
@@ -1818,7 +1817,7 @@ app.get("/ads.js", (req, res) => {
 });
 
 // Build marker so you can confirm which version Vercel is actually running.
-app.get("/version", (req, res) => res.json({ build: "cp-restart-v11", checkpoints: CHECKPOINTS.length }));
+app.get("/version", (req, res) => res.json({ build: "cp-restart-v11b", checkpoints: CHECKPOINTS.length }));
 
 // Debug: the server's step-by-step log of what happened on your recent requests (newest first).
 app.get("/trace", wrap(async (req, res) => {
