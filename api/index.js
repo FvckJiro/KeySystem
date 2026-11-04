@@ -102,7 +102,7 @@ const SCRIPTS = [
 // platform decides the section: "Android"/"iOS"/"Mobile" -> Mobile Executors, anything else -> PC Executors
 const EXECUTORS = [
   { name: "Swift", platform: "Windows", price: "Free", status: "Working", description: "A modern Roblox development workspace for scripting, testing, and managing projects in one focused IDE..", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/real.png", link: "https://projectreal.gg/" },
-  { name: "Wave", platform: "Windows", price: "Paid", status: "Working", description: "One of the best free executor rn.", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/madium.png", link: "https://getmadium.net/" },
+  { name: "Madium", platform: "Windows", price: "Free", status: "Working", description: "One of the best free executor rn.", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/madium.png", link: "https://getmadium.net/" },
   { name: "Delta", platform: "iOS, Android", price: "Free", status: "Working", description: "Popular free mobile executor for iOs And Android. Easy setup.", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/delta.jpg", link: "https://deltaexploits.gg/delta-executor" },
   { name: "Arceus Neo", platform: "iOS, Android", price: "Free", status: "Working", description: "Free executor for iPhone and Android. No key needed.", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/arceus.png", link: "https://spdmteam.com/index" },
 ];
