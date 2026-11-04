@@ -96,7 +96,7 @@ const GAMES = [
 const SCRIPTS = [
   // One entry is fine for a loader. A single script shows CENTERED on the page.
   // name = label shown, link = where it opens (your loader raw URL), leave link off for no button.
-  { name: "ObsessionHub Loader", copy: `loadstring(game:HttpGet("https://gist.githubusercontent.com/LazyJiroHub/2fe45c893269a0ba7747dab4e8637d02/raw/7077896e6f4383a970f7712dbf5d4e4fdb1d89bf/PD4"))()` },
+  { name: "ObsessionHub Loader", copy: `loadstring(game:HttpGet("https://luamoon.xyz/liofkwbophsubyzuujrauwfhw/loader"))()` },
   // Add more like: { name: "Another Script", copy: 'loadstring(...)()' }  or  { name: "Soon Script", soon: true }
 ];
 
