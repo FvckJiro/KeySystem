@@ -1258,12 +1258,16 @@ function hydrate(sid, s) {
 // setup, hash-field UPDATES (hset) to an existing key were silently not persisting -- so armed,
 // startedAt and even step reverted, which reset users to Checkpoint 1. redis.set/get round-trips
 // reliably (same as the challenge index), so the whole session goes through it.
+// Key prefix "sj:" (NOT the old "session:") so we never run redis.get against an old hash-type key
+// left by earlier versions -- that throws WRONGTYPE and 500s the page. Old keys are simply ignored.
+const SKEY = sid => "sj:" + sid;
 async function saveSession(sid, data) {
-  await redis.set("session:" + sid, JSON.stringify(data), { ex: SESSION_TTL_SECONDS });
+  try { await redis.set(SKEY(sid), JSON.stringify(data), { ex: SESSION_TTL_SECONDS }); } catch (e) {}
 }
 async function loadSessionRaw(sid) {
   if (!SID_RE.test(sid)) return null;
-  const raw = await redis.get("session:" + sid);
+  let raw;
+  try { raw = await redis.get(SKEY(sid)); } catch (e) { return null; } // WRONGTYPE / transient -> treat as none
   if (!raw) return null;
   try { return typeof raw === "string" ? JSON.parse(raw) : raw; } catch (e) { return null; }
 }
@@ -1743,7 +1747,7 @@ app.post("/checkpoint/verify", wrap(async (req, res) => {
 }));
 
 // Build marker so you can confirm which version Vercel is actually running.
-app.get("/version", (req, res) => res.json({ build: "cp-jsonsession-v9", checkpoints: CHECKPOINTS.length }));
+app.get("/version", (req, res) => res.json({ build: "cp-jsonsession-v9b", checkpoints: CHECKPOINTS.length }));
 
 // Debug: the server's step-by-step log of what happened on your recent requests (newest first).
 app.get("/trace", wrap(async (req, res) => {
@@ -1770,8 +1774,12 @@ app.get("/whoami", wrap(async (req, res) => {
 // Handy for testing. Real users never need it.
 app.get("/reset", wrap(async (req, res) => {
   const s = await getSession(req);
-  if (s) await redis.del("session:" + s.sid);
-  await redis.del("ipsess:" + getIp(req));
+  const cookieSid = getCookie(req, "ks_sid");
+  try {
+    if (s) await redis.del(SKEY(s.sid));
+    if (SID_RE.test(cookieSid)) { await redis.del(SKEY(cookieSid)); await redis.del("session:" + cookieSid); }
+    await redis.del("ipsess:" + getIp(req));
+  } catch (e) {}
   res.setHeader("Set-Cookie", `ks_sid=; Path=/; Max-Age=0`);
   res.redirect("/getkey");
 }));
