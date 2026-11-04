@@ -297,14 +297,14 @@ outerGlow.BackgroundTransparency = 1
 outerGlow.Image = "rbxassetid://1316045217"             -- soft 9-slice glow
 outerGlow.ScaleType = Enum.ScaleType.Slice
 outerGlow.SliceCenter = Rect.new(10, 10, 118, 118)
-outerGlow.ImageColor3 = Color3.fromRGB(120, 8, 20)      -- dark red
-outerGlow.ImageTransparency = 0.1
+outerGlow.ImageColor3 = Color3.fromRGB(150, 12, 26)     -- dark red
+outerGlow.ImageTransparency = 0.45
 outerGlow.ZIndex = 0                                    -- behind the card
 outerGlow.Parent = gui
 -- a second, tighter red layer for a richer glow
 local outerGlow2 = outerGlow:Clone()
-outerGlow2.ImageColor3 = Color3.fromRGB(200, 24, 48)
-outerGlow2.ImageTransparency = 0.28
+outerGlow2.ImageColor3 = Color3.fromRGB(224, 31, 58)
+outerGlow2.ImageTransparency = 0.55
 outerGlow2.Parent = gui
 
 -- responsive: scale the whole loader down to fit small / mobile screens
@@ -934,10 +934,10 @@ local function syncGlow()
     local sc = uiScale.Scale
     local w, h = root.AbsoluteSize.X, root.AbsoluteSize.Y
     if w < 10 then w, h = 410 * sc, 552 * sc end
-    outerGlow.Size = UDim2.fromOffset(w + 70 * sc, h + 78 * sc)
-    outerGlow.Position = root.Position + UDim2.fromOffset(0, 8 * sc)
-    outerGlow2.Size = UDim2.fromOffset(w + 34 * sc, h + 40 * sc)
-    outerGlow2.Position = root.Position + UDim2.fromOffset(0, 5 * sc)
+    outerGlow.Size = UDim2.fromOffset(w + 30 * sc, h + 34 * sc)
+    outerGlow.Position = root.Position + UDim2.fromOffset(0, 4 * sc)
+    outerGlow2.Size = UDim2.fromOffset(w + 16 * sc, h + 18 * sc)
+    outerGlow2.Position = root.Position + UDim2.fromOffset(0, 2 * sc)
 end
 pcall(syncGlow)
 
@@ -949,8 +949,8 @@ task.spawn(function()
         sheenGrad.Rotation = (sheenGrad.Rotation + 0.4) % 360
         glowT = glowT + 0.03
         local pulse = (math.sin(glowT * 1.6) + 1) / 2          -- 0..1 breathing
-        outerGlow.ImageTransparency = 0.08 + pulse * 0.18
-        outerGlow2.ImageTransparency = 0.22 + pulse * 0.2
+        outerGlow.ImageTransparency = 0.42 + pulse * 0.12
+        outerGlow2.ImageTransparency = 0.5 + pulse * 0.14
         syncGlow()
         task.wait(0.03)
     end
