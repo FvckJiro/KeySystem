@@ -70,8 +70,8 @@ const LOGO_URL = "";     // optional: link to your own logo image (https://...)
 // Optional: show ONE image on the Games page instead of the game tiles.
 // Paste a link to your own hosted image (upload it, copy the direct link). "" = show the normal tiles.
 const GAMES_BANNER = "";
-const DISCORD_URL = "https://discord.gg/YOUR-INVITE";        // your Discord invite ("" to hide)
-const YOUTUBE_URL = "https://youtube.com/@YOUR-CHANNEL";      // your YouTube channel ("" to hide)
+const DISCORD_URL = "https://discord.gg/G6gsENX87";        // your Discord invite ("" to hide)
+const YOUTUBE_URL = "https://www.youtube.com/@jirombv";      // your YouTube channel ("" to hide)
 
 // Add your supported games here. status: "Supported", "Updating" or "Unsupported"
 // Games checklist. Just write the game name to show a check.
@@ -101,10 +101,10 @@ const SCRIPTS = [
 // Add your executors here. status: "Working", "Updating" or "Down"
 // platform decides the section: "Android"/"iOS"/"Mobile" -> Mobile Executors, anything else -> PC Executors
 const EXECUTORS = [
-  { name: "Swift", platform: "Windows", price: "Free", status: "Working", description: "Fast and stable PC executor. Low detection, supports most scripts.", image: "https://picsum.photos/seed/swift/400/200", link: "https://your-download-link.com/swift" },
-  { name: "Wave", platform: "Windows", price: "Paid", status: "Working", description: "Premium Windows executor with fast updates and strong script support.", image: "https://picsum.photos/seed/wave/400/200", link: "https://your-download-link.com/wave" },
-  { name: "Delta", platform: "Android", price: "Free", status: "Working", description: "Popular free mobile executor for Android. Easy setup.", image: "https://picsum.photos/seed/delta/400/200", link: "https://your-download-link.com/delta" },
-  { name: "Codex", platform: "iOS", price: "Free", status: "Working", description: "Free iOS executor for iPhone and iPad. No jailbreak needed.", image: "https://picsum.photos/seed/codex/400/200", link: "https://your-download-link.com/codex" },
+  { name: "Swift", platform: "Windows", price: "Free", status: "Working", description: "A modern Roblox development workspace for scripting, testing, and managing projects in one focused IDE..", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/real.png", link: "https://projectreal.gg/" },
+  { name: "Wave", platform: "Windows", price: "Paid", status: "Working", description: "One of the best free executor rn.", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/madium.png", link: "https://getmadium.net/" },
+  { name: "Delta", platform: "Android", price: "Free", status: "Working", description: "Popular free mobile executor for Android. Easy setup.", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/delta.jpg", link: "https://your-download-link.com/delta" },
+  { name: "Codex", platform: "iOS", price: "Free", status: "Working", description: "Free iOS executor for iPhone and iPad. No jailbreak needed.", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/arceus.png", link: "https://your-download-link.com/codex" },
 ];
 
 // FAQ on the home page: [question, answer]
