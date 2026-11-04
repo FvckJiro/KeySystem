@@ -34,7 +34,7 @@ const SITE_NAME = "ObsessionHub";             // shown at the top of every page
 // Linkvertise dashboard for each link (that is Linkvertise's own server-side protection).
 const CHECKPOINTS = [
   "https://work.ink/2omP/checkpoint-1",   // Checkpoint 1  -> target /checkpoint/1
-  "https://work.ink/2omP/checkpoint2",   // Checkpoint 2  -> target /checkpoint/2
+  "https://work.ink/2omP/checkpoint-2",   // Checkpoint 2  -> target /checkpoint/2
 ];
 const MIN_SECONDS_PER_CHECKPOINT = 10;        // finishing faster than this = bypass
 const REQUIRE_REFERER = true;                 // require coming back from an allowed ad site (below)
@@ -1238,6 +1238,7 @@ function hydrate(sid, s) {
     pending: Number(s.pending) || 0,
     challenge: String(s.challenge || ""),
     chAt: Number(s.chAt) || 0,
+    armed: Number(s.armed) || 0,
   };
 }
 
@@ -1470,7 +1471,9 @@ app.get("/go/:n", wrap(async (req, res) => {
   const n = parseInt(req.params.n, 10);
   const s = await getSession(req);
   if (!s || n !== s.step + 1 || !CHECKPOINTS[n - 1]) return res.redirect("/getkey");
-  await redis.hset("session:" + s.sid, { startedAt: Date.now(), pending: 0, challenge: "", chAt: 0 });
+  // Record WHICH checkpoint this is (armed). The return leg will use this, not the URL number,
+  // so a work.ink link whose destination points at the wrong /checkpoint/N can't break the flow.
+  await redis.hset("session:" + s.sid, { armed: n, startedAt: Date.now(), pending: 0, challenge: "", chAt: 0 });
   // IP bridge: the return leg from the ad network (/checkpoint/N) has no ?s= and may arrive with no
   // cookie, so remember which session this IP just launched. Short TTL, used only to resume the flow.
   await redis.set("ipsess:" + getIp(req), s.sid, { ex: 20 * 60 });
@@ -1561,11 +1564,12 @@ function verifyPage(step, n, challenge) {
     </script>`, { done: step, total: CHECKPOINTS.length, mode: "verifying" });
 }
 
-// The ad network sends users here after they finish checkpoint n
-app.get("/checkpoint/:n", wrap(async (req, res) => {
+// The ad network sends users back here after they finish a checkpoint. IMPORTANT: we drive the
+// flow off the user's own progress (armed/step), NOT the number in the URL -- so it doesn't matter
+// which /checkpoint/N a work.ink link's destination points to, as long as it lands back on the site.
+async function handleCheckpointReturn(req, res) {
   res.setHeader("Cache-Control", "no-store");
   if (await isBanned(req)) return res.status(403).send(bannedPage());
-  const n = parseInt(req.params.n, 10);
   let s = await getSession(req);
 
   // IP bridge recovery: the ad network returns here with no ?s= and sometimes no cookie. If we
@@ -1581,47 +1585,40 @@ app.get("/checkpoint/:n", wrap(async (req, res) => {
   }
   // Keep the session alive on this device: re-anchor the cookie for the rest of the flow.
   res.setHeader("Set-Cookie", cookieHeader(s.sid));
-  if (n <= s.step) return res.redirect("/getkey?s=" + s.sid); // already done (e.g. refreshed)
 
-  // Already passed this checkpoint and waiting to verify (e.g. refreshed the page) -> resume, don't block
-  if (s.pending === n && s.challenge) {
+  const total = CHECKPOINTS.length;
+  if (s.step >= total) return res.redirect("/getkey?s=" + s.sid); // all done -> go claim the key
+
+  // The checkpoint being completed is ALWAYS the user's next one, by their progress.
+  const target = s.step + 1;
+
+  // Already passed this checkpoint and waiting to verify (e.g. refreshed the page) -> resume.
+  if (s.pending === target && s.challenge) {
     await redis.hset("session:" + s.sid, { chAt: Date.now() });
-    return res.send(verifyPage(s.step, n, s.challenge));
+    return res.send(verifyPage(s.step, target, s.challenge));
   }
 
-  // SOFT fail: the flow hiccuped (lost timing, odd referrer, out-of-order). This is NOT
-  // proof of a bypass tool, so we only reset progress on this checkpoint and send the user
-  // back to Get Key to retry. We do NOT add a strike / ban here -- false positives from ad
-  // networks were banning real users. The real bypass gate is the verify step below
-  // (proof-of-work + hold-to-verify + bot detection), which ad-bypassers cannot pass.
+  // SOFT fail: send back to Get Key to retry (no strike -- not proof of a bypass tool).
   const softFail = async () => {
-    // Clear only the in-flight state for THIS attempt (keep completed checkpoints / s.step).
     await redis.hset("session:" + s.sid, { startedAt: 0, pending: 0, challenge: "", chAt: 0 });
-    res.redirect("/getkey?retry=1");
+    res.redirect("/getkey?retry=1&s=" + s.sid);
   };
 
-  if (n !== s.step + 1) return softFail();
+  // Must have STARTED this exact checkpoint from our site (prevents replaying one ad to skip
+  // another). armed is set by /go and cleared on success.
+  if (s.armed !== target) return softFail();
 
-  // startedAt proves they launched this checkpoint from our site. Ad networks sometimes
-  // drop our round-trip state, so instead of hard-blocking when it's missing we arm it now
-  // and send them straight to the human check (the PoW + hold is what actually stops bots).
+  // Timing: arm if missing (ad networks drop round-trip state); reject suspiciously instant returns.
   if (!s.startedAt) {
     await redis.hset("session:" + s.sid, { startedAt: Date.now() });
   } else if ((Date.now() - s.startedAt) / 1000 < MIN_SECONDS_PER_CHECKPOINT) {
-    // Came back almost instantly with a real start time -> likely skipped the page. Retry.
     return softFail();
   }
 
-  // Lenient referrer check: ad networks often strip the referrer, so a MISSING referrer is
-  // allowed. Only retry when a referrer is present but is clearly not an allowed ad domain.
+  // Lenient referrer check: missing is allowed; only retry a referrer that's clearly not an ad domain.
   if (REQUIRE_REFERER && req.headers.referer && !isAllowedReferer(req.headers.referer)) return softFail();
 
-  // HARD anti-bypass: ask the RED-SQUARE network whether this specific return was a real
-  // completion or a detected bypass (a bypass website resolving your link without watching the
-  // ad). This is the ONLY check that truly knows the ad was completed, because the verdict comes
-  // from the ad network's own servers, not from browser heuristics. It is fail-open: disabled
-  // unless REDSQUARE_API_KEY is set, and it ignores its own known false positives, so it never
-  // blocks a legitimate user -- only a return the network itself flagged as bypassed.
+  // HARD anti-bypass (optional): RED-SQUARE verdict. Fail-open; disabled unless REDSQUARE_API_KEY set.
   if (REDSQUARE_ENABLED) {
     const rs = await redSquareVerdict(req);
     if (rs) {
@@ -1631,16 +1628,16 @@ app.get("/checkpoint/:n", wrap(async (req, res) => {
     }
   }
 
-  // Passed the soft checks; now the real browser security check (this is the anti-bypass gate).
-  // The challenge is the SOURCE OF TRUTH for verification: we store it with the session id, the
-  // checkpoint number, and the issue time, independent of the session's "pending" flag. That way
-  // verification works even if a stray request, a double-open, or a lost cookie clears/changes
-  // the session state during the ad round-trip (the exact cause of "No checkpoint is waiting").
+  // Passed the soft checks; now the real browser security check (proof-of-work + hold-to-verify).
+  // The challenge is the source of truth for verification, carrying the session id + checkpoint
+  // number + issue time, so it survives lost cookies / stray requests in the ad round-trip.
   const challenge = "c" + crypto.randomBytes(12).toString("hex");
-  await redis.hset("session:" + s.sid, { pending: n, challenge, chAt: Date.now(), startedAt: 0 });
-  await redis.set("chal:" + challenge, s.sid + "|" + n + "|" + Date.now(), { ex: 15 * 60 });
-  res.send(verifyPage(s.step, n, challenge));
-}));
+  await redis.hset("session:" + s.sid, { pending: target, challenge, chAt: Date.now(), startedAt: 0 });
+  await redis.set("chal:" + challenge, s.sid + "|" + target + "|" + Date.now(), { ex: 15 * 60 });
+  res.send(verifyPage(s.step, target, challenge));
+}
+app.get("/checkpoint/:n", wrap(handleCheckpointReturn));
+app.get("/checkpoint", wrap(handleCheckpointReturn)); // also works if the destination has no number
 
 // Browser security check result
 app.post("/checkpoint/verify", wrap(async (req, res) => {
@@ -1686,9 +1683,10 @@ app.post("/checkpoint/verify", wrap(async (req, res) => {
   const hash = crypto.createHash("sha256").update(postedCh + nonce).digest("hex");
   if (!hash.startsWith("0".repeat(POW_DIFFICULTY))) return fail("invalid security check.");
 
-  // Passed. Advance this session to checkpoint n and consume the challenge.
+  // Passed. Advance this session to checkpoint n and consume the challenge. Clear "armed" so the
+  // same completed ad can't be replayed to skip the next checkpoint.
   await redis.del("chal:" + postedCh);
-  await redis.hset("session:" + sid, { step: n, pending: 0, challenge: "", chAt: 0 });
+  await redis.hset("session:" + sid, { step: n, pending: 0, challenge: "", chAt: 0, armed: 0 });
   // Re-anchor the cookie to this session so the next checkpoint's Get Key page tracks it, even if
   // the ad round-trip landed the verify POST in a different cookie context.
   res.setHeader("Set-Cookie", cookieHeader(sid));
@@ -1698,7 +1696,7 @@ app.post("/checkpoint/verify", wrap(async (req, res) => {
 }));
 
 // Build marker so you can confirm which version Vercel is actually running.
-app.get("/version", (req, res) => res.json({ build: "cp-ipbridge-v6r", checkpoints: CHECKPOINTS.length }));
+app.get("/version", (req, res) => res.json({ build: "cp-progressdriven-v7", checkpoints: CHECKPOINTS.length }));
 
 // Debug: shows how the server resolves your session right now (cookie vs URL vs IP bridge).
 app.get("/whoami", wrap(async (req, res) => {
