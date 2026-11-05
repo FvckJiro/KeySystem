@@ -47,19 +47,20 @@ local Config = {
     -- "file" = the script's file name inside your src/ folder (added onto ScriptBase above).
     -- placeIds = { <Place ID>, <Universe ID> } -- the loader matches either one.
     Scripts = {
-        { name = "Tap Simulator",          file = "TSR.lua", requiresKey = true, placeIds = { 72858262610964, 10629695169 } },
-        { name = "Death Ball",             file = "DB.lua",  requiresKey = true, placeIds = { 15002061926, 5166944221 } },
-        { name = "Break And Steal An Egg", file = "BAS.lua", requiresKey = true, placeIds = { 114326934417838, 10765288803 } },
-        { name = "Anime Dice",             file = "AD.lua",  requiresKey = true, placeIds = { 113290951185459, 10708913337 } },
-        { name = "Steal An Egg",           file = "SAE.lua", requiresKey = true, placeIds = { 107778070777162, 10563114921 } },
-        { name = "Strafe Fps",             file = "SF.lua",  requiresKey = true, placeIds = { 109020905733214, 9187332740 } },
-        { name = "Ride A Pet",             file = "RAP.lua", requiresKey = true, placeIds = { 124216119978534, 10035204815 } },
-        { name = "Deep Fishing",           file = "DF.lua",  requiresKey = true, placeIds = { 132239307080610, 10526853622 } },
-        { name = "Gun Forge",              file = "GF.lua",  requiresKey = true, placeIds = { 75687962646869, 10766957927 } },
-        { name = "Vagrant Survival",       file = "VS.lua",  requiresKey = true, placeIds = { 100283815455755, 9224753153 } },
-        { name = "Project Delta",          file = "PD.lua",  requiresKey = true, placeIds = { 7336302630, 2862098693 } },
-        { name = "Loot To Forge",          file = "LTF.lua", requiresKey = true, placeIds = { 118805555015549, 10684750879 } },
-        { name = "Indo Voice",             file = "IV.lua",  requiresKey = true, placeIds = { 8356562067 } }
+        { name = "TS",          file = "TSR.lua", requiresKey = true, placeIds = { 72858262610964, 10629695169 } },
+        { name = "DB",             file = "DB.lua",  requiresKey = false, placeIds = { 15002061926, 5166944221 } },
+        { name = "BASE", file = "BAS.lua", requiresKey = false, placeIds = { 114326934417838, 10765288803 } },
+        { name = "AD",             file = "AD.lua",  requiresKey = false, placeIds = { 113290951185459, 10708913337 } },
+        { name = "SAE",           file = "SAE.lua", requiresKey = false, placeIds = { 107778070777162, 10563114921 } },
+        { name = "SF",             file = "SF.lua",  requiresKey = false, placeIds = { 109020905733214, 9187332740 } },
+        { name = "RAP",             file = "RAP.lua", requiresKey = false, placeIds = { 124216119978534, 10035204815 } },
+        { name = "DF",           file = "DF.lua",  requiresKey = false, placeIds = { 132239307080610, 10526853622 } },
+        { name = "GF",              file = "GF.lua",  requiresKey = false, placeIds = { 75687962646869, 10766957927 } },
+        { name = "VS",       file = "VS.lua",  requiresKey = true, placeIds = { 100283815455755, 9224753153 } },
+        { name = "PD",          file = "PD.lua",  requiresKey = true, placeIds = { 7336302630, 2862098693 } },
+        { name = "LTF",          file = "LTF.lua", requiresKey = true, placeIds = { 118805555015549, 10684750879 } },
+        { name = "AH",          file = "AH.lua", requiresKey = true, placeIds = { 10148749921, 78515283254292 } },
+        { name = "IV",             file = "IV.lua",  requiresKey = true, placeIds = { 8356562067 } }
     },
 
     -- Optional image shown at the top of the loader. Use YOUR OWN art.
