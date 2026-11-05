@@ -89,6 +89,7 @@ const GAMES = [
   "Strafe Fps",
   "Tap Simulator",
   "Gun Forge",
+  "Throw Food For Animals",
   "Vabrant Survival",
   { name: "Bloxfruit", soon: true },
   { name: "Slayer2", soon: true },
