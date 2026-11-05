@@ -5,8 +5,6 @@ const { Redis } = require("@upstash/redis");
 const app = express();
 app.use(express.json({ limit: "10kb" }));
 
-// Find the Upstash Redis REST URL + token from the environment, no matter what
-// prefix Vercel's integration added (e.g. STORAGE_KV_REST_API_URL, etc.)
 function findEnv(nameTest, valTest) {
   for (const [k, v] of Object.entries(process.env)) {
     if (typeof v === "string" && v && nameTest(k) && (!valTest || valTest(v))) return v;
@@ -25,56 +23,42 @@ const redis = new Redis({
   automaticDeserialization: false,
 });
 
-// ===== CONFIG =====
-const SITE_NAME = "ObsessionHub";             // shown at the top of every page
-// Your ad links, in order. In your ad network dashboard, set each link's TARGET/destination to:
-//   Checkpoint 1 -> https://YOUR-SITE.vercel.app/checkpoint/1
-//   Checkpoint 2 -> https://YOUR-SITE.vercel.app/checkpoint/2   (and so on)
-// For Linkvertise: create the link with that target, then turn ON "Anti-Bypass" in the
-// Linkvertise dashboard for each link (that is Linkvertise's own server-side protection).
-const CHECKPOINTS = [
-  "https://work.ink/2omP/checkpoint-1",    // Checkpoint 1
-  "https://work.ink/2omP/checkpoint--2",   // Checkpoint 2
-];
-const MIN_SECONDS_PER_CHECKPOINT = 10;        // finishing faster than this = bypass
-const REQUIRE_REFERER = true;                 // require coming back from an allowed ad site (below)
-const CHECK_FETCH_META = true;                // block bypass tools that fetch the link instead of really visiting it
-const SESSION_TTL_SECONDS = 60 * 60;          // users have 1 hour to finish all checkpoints
-const POW_DIFFICULTY = 4;                     // browser security check strength: 3 light, 4 strong, 5 very strong (slower)
-const BIND_IP = false;                        // keep false: mobile IPs change mid-checkpoint and cause false bypasses
-const MAX_STRIKES = 3;                        // bypass attempts before a temporary IP ban
-const BAN_SECONDS = 5 * 60 * 60;              // ban length (5 hours)
+const SITE_NAME = "ObsessionHub";
 
-// ----- RED-SQUARE anti-bypass network (optional extra layer) -----
-// Wrap each checkpoint link with RED-SQUARE (kys.linkvertise.lol), turn on "ManualDetectionZ",
-// set the wrapped link's target to your /checkpoint/N URL, and put your API key in the
-// REDSQUARE_API_KEY env var on Vercel. When their network detects a bypass it sends the user
-// back with an RS_EvaluationDT token; your server checks it here. Leave the env var unset to disable.
+const CHECKPOINTS = [
+  "https://work.ink/2omP/checkpoint-1",
+  "https://work.ink/2omP/checkpoint--2",
+];
+const MIN_SECONDS_PER_CHECKPOINT = 10;
+const REQUIRE_REFERER = true;
+const CHECK_FETCH_META = true;
+const SESSION_TTL_SECONDS = 60 * 60;
+const POW_DIFFICULTY = 4;
+const BIND_IP = false;
+const MAX_STRIKES = 3;
+const BAN_SECONDS = 5 * 60 * 60;
+
 const REDSQUARE_API_KEY = process.env.REDSQUARE_API_KEY || "";
 const REDSQUARE_ENABLED = !!REDSQUARE_API_KEY;
-const REDSQUARE_HOST = process.env.REDSQUARE_HOST || "kys.linkvertise.lol"; // or "red-square.space"
+const REDSQUARE_HOST = process.env.REDSQUARE_HOST || "kys.linkvertise.lol";
 const REDSQUARE_TIMEOUT_MS = 4000;
-// Detections with known false positives for normal users — not enough on their own to block.
+
 const REDSQUARE_IGNORE = ["referer_missmatch", "DeadHand_MagnusX7"];
-const KEY_TTL_SECONDS = 5 * 60 * 60;          // free key lifetime (5 hours)
-const RESET_COOLDOWN_SECONDS = 12 * 60 * 60;  // user HWID reset cooldown
+const KEY_TTL_SECONDS = 12 * 60 * 60;
+const KEY_HOURS = Math.round(KEY_TTL_SECONDS / 3600);
+const RESET_COOLDOWN_SECONDS = 12 * 60 * 60;
 const MAX_KEYS_PER_IP_PER_DAY = 5;
-// Domains users are allowed to return from. Linkvertise redirects through several of these.
+
 const ALLOWED_REFERRERS = ["lootlabs.gg", "work.ink", "linkvertise.com", "linkvertise.net", "link-to.net", "link-hub.net", "direct-link.net", "publisher.linkvertise.com"];
 const ADMIN_SECRET = process.env.ADMIN_SECRET || "";
 
-// ===== HOME PAGE CONTENT (edit these) =====
-const TAGLINE = "Get your key, pick your script, and start playing. Keys last 5 hours.";
-const LOGO_URL = "";     // optional: link to your own logo image (https://...)
-// Optional: show ONE image on the Games page instead of the game tiles.
-// Paste a link to your own hosted image (upload it, copy the direct link). "" = show the normal tiles.
-const GAMES_BANNER = "";
-const DISCORD_URL = "https://discord.gg/G6gsENX87";        // your Discord invite ("" to hide)
-const YOUTUBE_URL = "https://www.youtube.com/@jirombv";      // your YouTube channel ("" to hide)
+const TAGLINE = `Get your key, pick your script, and start playing. Keys last ${KEY_HOURS} hours.`;
+const LOGO_URL = "";
 
-// Add your supported games here. status: "Supported", "Updating" or "Unsupported"
-// Games checklist. Just write the game name to show a check.
-// For a game that isn't ready, write { name: "X", soon: true } to show COMING SOON.
+const GAMES_BANNER = "";
+const DISCORD_URL = "https://discord.gg/G6gsENX87";
+const YOUTUBE_URL = "https://www.youtube.com/@jirombv";
+
 const GAMES = [
   "Anime Dice",
   "Death Ball",
@@ -95,16 +79,12 @@ const GAMES = [
   { name: "Slayer2", soon: true },
 ];
 
-// Add your scripts here. status: "Working", "Updating" or "Patched"
 const SCRIPTS = [
-  // One entry is fine for a loader. A single script shows CENTERED on the page.
-  // name = label shown, link = where it opens (your loader raw URL), leave link off for no button.
+
   { name: "ObsessionHub Loader", copy: `loadstring(game:HttpGet("https://luamoon.xyz/liofkwbophsubyzuujrauwfhw/loader"))()` },
-  // Add more like: { name: "Another Script", copy: 'loadstring(...)()' }  or  { name: "Soon Script", soon: true }
+
 ];
 
-// Add your executors here. status: "Working", "Updating" or "Down"
-// platform decides the section: "Android"/"iOS"/"Mobile" -> Mobile Executors, anything else -> PC Executors
 const EXECUTORS = [
   { name: "Real", platform: "Windows", price: "Free", status: "Working", description: "A modern Roblox development workspace for scripting, testing, and managing projects in one focused IDE..", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/real.png", link: "https://projectreal.gg/" },
   { name: "Madium", platform: "Windows", price: "Free", status: "Working", description: "One of the best free executor rn.", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/madium.png", link: "https://getmadium.net/" },
@@ -112,21 +92,18 @@ const EXECUTORS = [
   { name: "Arceus Neo", platform: "iOS, Android", price: "Free", status: "Working", description: "Free executor for iPhone and Android. No key needed.", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/arceus.png", link: "https://spdmteam.com/index" },
 ];
 
-// FAQ on the home page: [question, answer]
 const FAQ = [
-  ["How long does a key last?", "Free keys last 5 hours. After that, just get a new one."],
+  ["How long does a key last?", `Free keys last ${KEY_HOURS} hours. After that, just get a new one.`],
   ["Why does my key say wrong device?", "Keys lock to the first device that uses them. Open the Key Checker and tap Reset HWID."],
   ["How often can I reset my HWID?", "Once every 12 hours per key."],
   ["Why did I get Bypass Detected?", "Ad bypassers and skipping checkpoints aren't allowed. Start over and complete each checkpoint normally."],
 ];
 
-// Keys look like OBSESSION-XXXX-XXXX-XXXX
 const KEY_RE = /^OBSESSION-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
 const KEY_PREFIX = "OBSESSION-";
 const KEY_PLACEHOLDER = "OBSESSION-XXXX-XXXX-XXXX";
 const HWID_RE = /^[A-Za-z0-9\-_{}.:]{4,128}$/;
 
-// ===== HELPERS =====
 const str = v => (typeof v === "string" ? v.trim() : "");
 const wrap = fn => (req, res, next) => fn(req, res).catch(next);
 
@@ -136,8 +113,6 @@ function randomKey() {
   return KEY_PREFIX + group(4) + "-" + group(4) + "-" + group(4);
 }
 
-// Creates a unique key. ttlSeconds = null makes it a lifetime key (never expires).
-// opts: { maxDevices (default 1), label (custom name shown to users, e.g. "PREMIUM") }
 async function createKey(ttlSeconds, type, opts = {}) {
   const maxdev = Math.min(100, Math.max(1, Math.floor(Number(opts.maxDevices) || 1)));
   const label = (typeof opts.label === "string" ? opts.label.trim() : "").slice(0, 24);
@@ -149,7 +124,7 @@ async function createKey(ttlSeconds, type, opts = {}) {
       if (label) fields.label = label;
       await redis.hset("key:" + candidate, fields);
       if (ttlSeconds) await redis.expire("key:" + candidate, ttlSeconds);
-      // Log for the admin "Generated Keys" view (keep the last 100, count the total)
+
       await redis.lpush("recent:keys", JSON.stringify({ key: candidate, at, type, label, maxdev }));
       await redis.ltrim("recent:keys", 0, 99);
       await redis.incr("stats:generated");
@@ -159,7 +134,6 @@ async function createKey(ttlSeconds, type, opts = {}) {
   throw new Error("Could not generate unique key");
 }
 
-// Read how many devices a key is bound to, and its limit (handles legacy single-hwid keys)
 function deviceInfo(data) {
   const max = Math.max(1, Math.floor(Number(data.maxdev) || 1));
   let raw = data.hwids != null ? String(data.hwids) : "";
@@ -168,7 +142,6 @@ function deviceInfo(data) {
   return { hwids, count: hwids.length, max };
 }
 
-// A friendly display name for a key's tier (custom label wins)
 function keyLabel(data) {
   if (data.label) return String(data.label);
   const t = data.type;
@@ -197,9 +170,6 @@ function formatDuration(seconds) {
   return `in ${d}d ${h}h ${m}m`;
 }
 
-// Atomic multi-device check.
-// Returns: 0 = key missing/expired, 1 = OK (binds this device if there's room), 2 = device limit reached.
-// Devices are stored as a comma-separated list in the 'hwids' field; 'maxdev' is how many are allowed.
 const CHECK_SCRIPT = `
 if redis.call('EXISTS', KEYS[1]) == 0 then return 0 end
 local maxdev = tonumber(redis.call('HGET', KEYS[1], 'maxdev')) or 1
@@ -222,7 +192,6 @@ if #list < maxdev then
 end
 return 2`;
 
-// ===== DESIGN =====
 const CSS = String.raw`
 @property --ang{syntax:"<angle>";initial-value:0deg;inherits:false}
 :root{--bg:#0a0507;--card:rgba(22,7,11,.74);--line:rgba(255,59,78,.18);--red:#e01f3a;--red2:#ff3b4e;
@@ -301,11 +270,9 @@ a{color:#ff8a96}
 pre{text-align:left;background:rgba(0,0,0,.45);border:1px solid rgba(255,59,78,.2);border-radius:10px;padding:12px;
   margin:14px 0 0;overflow:auto;font-size:.82rem;max-height:300px;color:#ffd6db;white-space:pre-wrap;word-break:break-all}
 
-
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}#embers{display:none}}
 `;
 
-// Embers, button ripples, and the sound engine (all music is generated live, nothing to download)
 const SHARED_JS = String.raw`
 (function(){
   var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -727,7 +694,6 @@ const statusClass = s => /undetected/i.test(s) ? "s-ok"
   : /unsupported|patch|down|detected|broken|offline/i.test(s) ? "s-bad"
   : /work|online|supported|\bup\b/i.test(s) ? "s-ok" : "s-mid";
 
-// ===== CHECKPOINT SIDEBAR LAYOUT =====
 const SIDE_CSS = String.raw`
 body.cpl{display:block;padding:0}
 .cpl-wrap{display:grid;grid-template-columns:300px 1fr;min-height:100vh}
@@ -863,10 +829,6 @@ function cpPage(title, body, side) {
 </body></html>`);
 }
 
-// ===== CLIENT-SIDE JS OBFUSCATION (optional, for your own deploy) =====
-// Set OBFUSCATE=1 in Vercel env vars to scramble the JavaScript sent to browsers,
-// making it much harder to read how the checkpoints and anti-bypass work.
-// This only touches the client JS; your server code is never sent to users.
 const OBFUSCATE = process.env.OBFUSCATE === "1";
 let _obfLib = null;
 if (OBFUSCATE) {
@@ -894,7 +856,7 @@ function obfJs(code) {
   _obfCache.set(code, out);
   return out;
 }
-// Obfuscate every <script>…</script> block in a finished page (cached per unique script).
+
 function render(html) {
   if (!_obfLib) return html;
   return html.replace(/<script>([\s\S]*?)<\/script>/g, (m, code) =>
@@ -910,7 +872,6 @@ const head = title => `<!DOCTYPE html>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
 <style>${CSS}${HOME_CSS}${SIDE_CSS}</style></head>`;
 
-// ===== SITE PAGES (home, games, scripts, executors) =====
 const emptyTiles = (label, count = 1) =>
   Array.from({ length: Math.max(1, count) }, (_, i) =>
     `<div class="tile empty reveal" style="transition-delay:${i * 80}ms"><div><b>+</b>${label}</div></div>`).join("");
@@ -1004,10 +965,8 @@ ${siteFooter()}
 ${REVEAL_JS}${extraJs}
 </body></html>`);
 
-// An executor counts as "mobile" when its platform/name mentions a mobile OS
 const isMobileExec = e => /android|ios|iphone|ipad|mobile|phone|arm/i.test(((e.platform || "") + " " + (e.name || "")));
 
-// The loader section (shown on the Games page): a heading + the loadstring row(s) to copy.
 function loaderBlock() {
   const loaders = SCRIPTS.filter(s => s && typeof s === "object" && s.copy);
   if (!loaders.length) return "";
@@ -1031,7 +990,6 @@ function loaderBlock() {
 function listPage(kind) {
   const L = LISTS[kind], items = L.items();
 
-  // Games page: show ONLY a single banner image, centered, if one is set
   if (kind === "games" && safeUrl(GAMES_BANNER)) {
     return siteShell(L.title, "games", `
       <section style="padding:48px 0 36px;display:flex;justify-content:center">
@@ -1043,8 +1001,7 @@ function listPage(kind) {
 
   let body;
   if (kind === "games" || kind === "scripts") {
-    // checklist design: ✓ for supported, "COMING SOON" for the rest.
-    // Entries can be a plain name string, or { name, soon?, link? }.
+
     const rows = items.map(it => {
       const g = typeof it === "string" ? { name: it } : it;
       const soon = g.soon === true || /soon|unsupported|unsupport|wip/i.test(g.status || "");
@@ -1054,7 +1011,7 @@ function listPage(kind) {
         <span class="ck">${soon ? "–" : ICONS.check}</span>
         <span class="nm">${esc(g.name)}</span>
         ${badge}`;
-      // Script with a loadstring -> show the loadstring itself (not the name) and copy it on click.
+
       if (g.copy && !soon) {
         const codeInner = `
           <span class="ck">${ICONS.check}</span>
@@ -1066,12 +1023,12 @@ function listPage(kind) {
         ? `<a class="grow ok" data-q="${searchText(g.name)}" href="${esc(g.link)}" target="_blank" rel="noopener">${inner}</a>`
         : `<div class="grow ${soon ? "soon" : "ok"}" data-q="${searchText(g.name)}">${inner}</div>`;
     }).join("");
-    // Single item (e.g. just your loader) -> center it with the "one" variant.
+
     const oneCls = items.length === 1 ? " one" : "";
     const list = items.length
       ? `<div class="glist${oneCls}">${rows}</div>`
       : `<div class="tiles">${emptyTiles(L.empty, L.emptyCount)}</div>`;
-    // Games page: show the loader (with its loadstring to copy) ABOVE the supported-games list.
+
     body = kind === "games" ? loaderBlock() + list : list;
   } else if (kind === "executors") {
     const pc = items.filter(e => !isMobileExec(e));
@@ -1179,7 +1136,7 @@ function homePage() {
   const faq = FAQ.map(([q, a], i) => `
     <details class="reveal" style="transition-delay:${i * 60}ms"><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join("");
 
-  const ticker = ["Keys online", `${GAMES.length} games supported`, "HWID locked", "Anti-bypass active", "5h keys", "Lifetime keys available", "Key checker live"]
+  const ticker = ["Keys online", `${GAMES.length} games supported`, "HWID locked", "Anti-bypass active", `${KEY_HOURS}h keys`, "Lifetime keys available", "Key checker live"]
     .map(t => `<span><b>◆</b> ${t}</span>`).join("");
 
   return siteShell("Home", "home", `
@@ -1216,7 +1173,7 @@ function homePage() {
     <div class="steps">
       <div class="tile reveal"><div class="num">1</div><h4>Complete ${cpText}</h4><p>Tap Get Key and finish each short checkpoint in order.</p></div>
       <div class="tile reveal" style="transition-delay:80ms"><div class="num">2</div><h4>Pass the security check</h4><p>Hold to verify after each checkpoint. It takes a second.</p></div>
-      <div class="tile reveal" style="transition-delay:160ms"><div class="num">3</div><h4>Copy your key</h4><p>Paste it in the script. It lasts 5 hours and locks to your device.</p></div>
+      <div class="tile reveal" style="transition-delay:160ms"><div class="num">3</div><h4>Copy your key</h4><p>Paste it in the script. It lasts ${KEY_HOURS} hours and locks to your device.</p></div>
     </div>
   </section>
 
@@ -1262,18 +1219,13 @@ const page = (title, body, icon = "key", cls = "") => render(`${head(title)}
 </div>
 </body></html>`);
 
-// ===== HOME =====
 app.get("/", (req, res) => {
   res.send(homePage());
 });
 app.get("/games", (req, res) => res.send(listPage("games")));
-app.get("/scripts", (req, res) => res.redirect("/games")); // scripts merged into the Games page
+app.get("/scripts", (req, res) => res.redirect("/games"));
 app.get("/executors", (req, res) => res.send(listPage("executors")));
 
-// ===== CHECKPOINT SESSIONS & ANTI-BYPASS =====
-// Layers: session cookie + device fingerprint + IP binding, in-order checkpoints,
-// minimum time per checkpoint, ad-site referer, browser proof-of-work, hold-to-verify,
-// automation/honeypot detection, and temporary IP bans after repeated bypass attempts.
 const SID_RE = /^[a-f0-9]{32}$/;
 const uaHash = req => crypto.createHash("sha256").update(String(req.headers["user-agent"] || "")).digest("hex").slice(0, 16);
 
@@ -1282,13 +1234,8 @@ function getCookie(req, name) {
   return m ? decodeURIComponent(m[1]) : "";
 }
 
-// Session cookie. SameSite=Lax is sent on top-level navigations (including the return from the
-// ad network) and, unlike SameSite=None, is not dropped by browsers that block third-party
-// cookies -- which was causing progress to reset to Checkpoint 1 on mobile/in-app browsers.
 const cookieHeader = sid => `ks_sid=${sid}; Path=/; Max-Age=${SESSION_TTL_SECONDS}; HttpOnly; Secure; SameSite=Lax`;
 
-// Lightweight per-IP trace log so we can see exactly what the server did on a real run.
-// View it at /trace. Capped and expiring; never affects the flow (errors swallowed).
 async function trace(req, msg) {
   try {
     const ip = getIp(req);
@@ -1315,12 +1262,6 @@ function hydrate(sid, s) {
   };
 }
 
-// Sessions are stored as a single JSON string via redis.set (NOT a Redis hash). On this Upstash
-// setup, hash-field UPDATES (hset) to an existing key were silently not persisting -- so armed,
-// startedAt and even step reverted, which reset users to Checkpoint 1. redis.set/get round-trips
-// reliably (same as the challenge index), so the whole session goes through it.
-// Key prefix "sj:" (NOT the old "session:") so we never run redis.get against an old hash-type key
-// left by earlier versions -- that throws WRONGTYPE and 500s the page. Old keys are simply ignored.
 const SKEY = sid => "sj:" + sid;
 async function saveSession(sid, data) {
   try { await redis.set(SKEY(sid), JSON.stringify(data), { ex: SESSION_TTL_SECONDS }); } catch (e) {}
@@ -1328,11 +1269,11 @@ async function saveSession(sid, data) {
 async function loadSessionRaw(sid) {
   if (!SID_RE.test(sid)) return null;
   let raw;
-  try { raw = await redis.get(SKEY(sid)); } catch (e) { return null; } // WRONGTYPE / transient -> treat as none
+  try { raw = await redis.get(SKEY(sid)); } catch (e) { return null; }
   if (!raw) return null;
   try { return typeof raw === "string" ? JSON.parse(raw) : raw; } catch (e) { return null; }
 }
-// Read-modify-write a few fields. Requests in one user's flow are sequential, so no races in practice.
+
 async function patchSession(sid, patch) {
   const cur = (await loadSessionRaw(sid)) || {};
   const next = { ...cur, ...patch };
@@ -1346,9 +1287,7 @@ async function loadSession(sid) {
 }
 
 async function getSession(req) {
-  // URL (?s=) FIRST, cookie second. Our own redirects always carry the correct, fresh session id
-  // in ?s=; the cookie can be stale or dropped in mobile/in-app browsers, which was overriding the
-  // right session and resetting progress to Checkpoint 1. The URL param is the source of truth.
+
   let sid = req.query ? str(req.query.s) : "";
   if (!SID_RE.test(sid)) sid = getCookie(req, "ks_sid");
   return loadSession(sid);
@@ -1358,9 +1297,7 @@ async function newSession(req, res) {
   const sid = crypto.randomBytes(16).toString("hex");
   const fresh = { step: 0, startedAt: 0, ua: uaHash(req), ip: getIp(req), pending: 0, challenge: "", chAt: 0, armed: 0, key: "" };
   await saveSession(sid, fresh);
-  // SameSite=Lax: survives the top-level navigation back from the ad network, and (unlike None)
-  // is NOT dropped by mobile/in-app browsers that block third-party cookies -- which was wiping
-  // progress and resetting users to Checkpoint 1.
+
   res.setHeader("Set-Cookie", cookieHeader(sid));
   return { sid, ...fresh };
 }
@@ -1378,41 +1315,34 @@ async function addStrike(req) {
   if (n >= MAX_STRIKES) await redis.set("ban:" + ip, 1, { ex: BAN_SECONDS });
 }
 
-// Ask the RED-SQUARE network whether this return was a detected bypass.
-// Returns "" when clean/unknown (fail-open), or a reason string when it flags a real bypass.
 async function redSquareVerdict(req) {
   if (!REDSQUARE_ENABLED) return "";
   const token = str(req.query && req.query.RS_EvaluationDT);
-  if (!token || !/^[\w.-]{8,512}$/.test(token)) return ""; // no token = nothing was flagged
+  if (!token || !/^[\w.-]{8,512}$/.test(token)) return "";
   try {
     const opts = { headers: { "c-api-key": REDSQUARE_API_KEY } };
     if (typeof AbortSignal !== "undefined" && AbortSignal.timeout) opts.signal = AbortSignal.timeout(REDSQUARE_TIMEOUT_MS);
     const r = await fetch(`https://${REDSQUARE_HOST}/api/v2/ManualReport?tk=${encodeURIComponent(token)}`, opts);
-    if (!r.ok) return "";                       // their API down → don't block real users
+    if (!r.ok) return "";
     const d = await r.json();
     if (!d || d.success !== true) return "";
     const report = d.FinalReport && typeof d.FinalReport === "object" ? d.FinalReport : {};
     const hits = Object.keys(report).filter(k => !REDSQUARE_IGNORE.includes(k));
     return hits.length ? "flagged by anti-bypass network (" + hits[0] + ")." : "";
-  } catch (e) { return ""; }                    // network/parse error → fail-open
+  } catch (e) { return ""; }
 }
 
-// Browsers set Sec-Fetch-* on real navigations and forbid JS from changing them,
-// so a bypass tool that fetch()es the link (instead of actually visiting it) gives itself away.
 function checkFetchMeta(req) {
   if (!CHECK_FETCH_META) return "";
   const dest = req.headers["sec-fetch-dest"];
   const mode = req.headers["sec-fetch-mode"];
   const site = req.headers["sec-fetch-site"];
-  // Only catch scripted fetch/XHR: a real tab navigation is always document + navigate.
-  // We do NOT block on sec-fetch-site "none" — ad networks often open the destination
-  // with the referrer stripped, which legitimately looks like a direct open.
+
   if (dest && dest !== "document") return "This checkpoint wasn't opened in a real browser tab.";
   if (mode && mode !== "navigate") return "This checkpoint wasn't opened in a real browser tab.";
   return "";
 }
 
-// Same device and network as when the session started?
 function sameClient(s, req) {
   if (s.ua && s.ua !== uaHash(req)) return "Your device changed during the checkpoint.";
   if (BIND_IP && s.ip && s.ip !== getIp(req)) return "Your network changed during the checkpoint.";
@@ -1447,7 +1377,6 @@ function socials() {
 
 const toast = text => `<div class="toast" id="toast"><i>✓</i>${esc(text)}</div>`;
 
-// ===== GET KEY (checkpoint flow) =====
 app.get("/getkey", wrap(async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   if (await isBanned(req)) return res.status(403).send(bannedPage());
@@ -1462,12 +1391,9 @@ app.get("/getkey", wrap(async (req, res) => {
 
   const existing = await getSession(req);
   const s = existing || (await newSession(req, res));
-  // Re-anchor the cookie on every load (also covers sessions resumed via ?s= when the cookie was dropped).
+
   res.setHeader("Set-Cookie", cookieHeader(s.sid));
 
-  // Restart on leave: a FRESH visit to /getkey (no ?s= and no ?done=, i.e. not part of the active
-  // flow or the ad round-trip) wipes mid-progress back to Checkpoint 1. So if someone does a
-  // checkpoint, leaves the site, and comes back later, they start over instead of resuming.
   const inFlow = !!(req.query && (str(req.query.s) || req.query.done));
   if (!inFlow && s.step > 0 && s.step < total) {
     await patchSession(s.sid, { step: 0, startedAt: 0, pending: 0, challenge: "", chAt: 0, armed: 0 });
@@ -1480,7 +1406,6 @@ app.get("/getkey", wrap(async (req, res) => {
   const celebrate = justDone >= 1 && justDone <= s.step;
   const retried = req.query.retry === "1";
 
-  // ---- All checkpoints done: the key ----
   if (s.step >= total) {
     if (!s.key || await redis.exists("key:" + s.key) !== 1) {
       const ipKey = "ratelimit:" + getIp(req);
@@ -1538,11 +1463,9 @@ app.get("/getkey", wrap(async (req, res) => {
       </script>`, { done: total, total, mode: "complete" }));
   }
 
-  // ---- Next checkpoint ----
   const next = s.step + 1;
   const pct = Math.round((s.step / total) * 100);
-  // Arm the checkpoint when the page is shown, so the return works even if the
-  // ad network opens the destination without the /go hop surviving.
+
   if (!s.startedAt) {
     await patchSession(s.sid, { startedAt: Date.now() });
     s.startedAt = Date.now();
@@ -1628,7 +1551,6 @@ app.get("/getkey", wrap(async (req, res) => {
     </script>`, { done: s.step, total, mode: "ready" }));
 }));
 
-// Records when a checkpoint starts, then sends the user to the ad link
 app.get("/go/:n", wrap(async (req, res) => {
   if (await isBanned(req)) return res.status(403).send(bannedPage());
   const n = parseInt(req.params.n, 10);
@@ -1637,14 +1559,12 @@ app.get("/go/:n", wrap(async (req, res) => {
     await trace(req, `go n=${n} REJECTED (s=${!!s} step=${s ? s.step : "?"}) -> /getkey`);
     return res.redirect("/getkey");
   }
-  // Record WHICH checkpoint this is (armed). The return leg will use this, not the URL number,
-  // so a work.ink link whose destination points at the wrong /checkpoint/N can't break the flow.
+
   await patchSession(s.sid, { armed: n, startedAt: Date.now(), pending: 0, challenge: "", chAt: 0 });
   await trace(req, `go n=${n} sid=${s.sid.slice(0, 6)} armed->${n} -> ${CHECKPOINTS[n - 1]}`);
-  // IP bridge: the return leg from the ad network (/checkpoint/N) has no ?s= and may arrive with no
-  // cookie, so remember which session this IP just launched. Short TTL, used only to resume the flow.
+
   await redis.set("ipsess:" + getIp(req), s.sid, { ex: 20 * 60 });
-  // Don't leak the session id (?s=) to the ad network in the Referer header.
+
   res.setHeader("Referrer-Policy", "no-referrer");
   res.redirect(CHECKPOINTS[n - 1]);
 }));
@@ -1731,16 +1651,11 @@ function verifyPage(step, n, challenge) {
     </script>`, { done: step, total: CHECKPOINTS.length, mode: "verifying" });
 }
 
-// The ad network sends users back here after they finish a checkpoint. IMPORTANT: we drive the
-// flow off the user's own progress (armed/step), NOT the number in the URL -- so it doesn't matter
-// which /checkpoint/N a work.ink link's destination points to, as long as it lands back on the site.
 async function handleCheckpointReturn(req, res) {
   res.setHeader("Cache-Control", "no-store");
   if (await isBanned(req)) return res.status(403).send(bannedPage());
   let s = await getSession(req);
 
-  // IP bridge recovery: the ad network returns here with no ?s= and sometimes no cookie. If we
-  // can't identify the session the normal way, resume the one this IP launched a moment ago.
   if (!s) {
     const rid = str(await redis.get("ipsess:" + getIp(req)));
     s = await loadSession(rid);
@@ -1751,7 +1666,7 @@ async function handleCheckpointReturn(req, res) {
     await addStrike(req);
     return res.status(403).send(bypassPage("No checkpoint session found. Checkpoints must be started from this site."));
   }
-  // Keep the session alive on this device: re-anchor the cookie for the rest of the flow.
+
   res.setHeader("Set-Cookie", cookieHeader(s.sid));
 
   const total = CHECKPOINTS.length;
@@ -1760,38 +1675,30 @@ async function handleCheckpointReturn(req, res) {
 
   if (s.step >= total) { await trace(req, "-> already done, redirect to key"); return res.redirect("/getkey?s=" + s.sid); }
 
-  // The checkpoint being completed is ALWAYS the user's next one, by their progress.
   const target = s.step + 1;
 
-  // Already passed this checkpoint and waiting to verify (e.g. refreshed the page) -> resume.
   if (s.pending === target && s.challenge) {
     await trace(req, `-> resume verify for cp${target}`);
     await patchSession(s.sid, { chAt: Date.now() });
     return res.send(verifyPage(s.step, target, s.challenge));
   }
 
-  // SOFT fail: send back to Get Key to retry (no strike -- not proof of a bypass tool).
   const softFail = async why => {
     await trace(req, `-> SOFT FAIL (${why}) armed=${s.armed} target=${target} startedAt=${s.startedAt}`);
     await patchSession(s.sid, { startedAt: 0, pending: 0, challenge: "", chAt: 0 });
     res.redirect("/getkey?retry=1&s=" + s.sid);
   };
 
-  // Must have STARTED this exact checkpoint from our site (prevents replaying one ad to skip
-  // another). armed is set by /go and cleared on success.
   if (s.armed !== target) return softFail("armed!=target");
 
-  // Timing: arm if missing (ad networks drop round-trip state); reject suspiciously instant returns.
   if (!s.startedAt) {
     await patchSession(s.sid, { startedAt: Date.now() });
   } else if ((Date.now() - s.startedAt) / 1000 < MIN_SECONDS_PER_CHECKPOINT) {
     return softFail("too fast " + Math.round((Date.now() - s.startedAt) / 1000) + "s");
   }
 
-  // Lenient referrer check: missing is allowed; only retry a referrer that's clearly not an ad domain.
   if (REQUIRE_REFERER && req.headers.referer && !isAllowedReferer(req.headers.referer)) return softFail("bad referer " + req.headers.referer);
 
-  // HARD anti-bypass (optional): RED-SQUARE verdict. Fail-open; disabled unless REDSQUARE_API_KEY set.
   if (REDSQUARE_ENABLED) {
     const rs = await redSquareVerdict(req);
     if (rs) {
@@ -1801,9 +1708,6 @@ async function handleCheckpointReturn(req, res) {
     }
   }
 
-  // Passed the soft checks; now the real browser security check (proof-of-work + hold-to-verify).
-  // The challenge is the source of truth for verification, carrying the session id + checkpoint
-  // number + issue time, so it survives lost cookies / stray requests in the ad round-trip.
   const challenge = "c" + crypto.randomBytes(12).toString("hex");
   await patchSession(s.sid, { pending: target, challenge, chAt: Date.now(), startedAt: 0 });
   await redis.set("chal:" + challenge, s.sid + "|" + target + "|" + Date.now(), { ex: 15 * 60 });
@@ -1811,18 +1715,14 @@ async function handleCheckpointReturn(req, res) {
   res.send(verifyPage(s.step, target, challenge));
 }
 app.get("/checkpoint/:n", wrap(handleCheckpointReturn));
-app.get("/checkpoint", wrap(handleCheckpointReturn)); // also works if the destination has no number
+app.get("/checkpoint", wrap(handleCheckpointReturn));
 
-// Browser security check result
 app.post("/checkpoint/verify", wrap(async (req, res) => {
   if (await isBanned(req)) return res.json({ ok: false, reason: "Your network is temporarily blocked." });
   const body = req.body || {};
   const nonce = typeof body.nonce === "string" ? body.nonce : "";
   const postedCh = str(body.ch);
 
-  // Look the challenge up in its index. This is the single source of truth: if it exists, a real
-  // checkpoint page issued it (so the gate was passed) and it hasn't been used yet. We do NOT rely
-  // on the session cookie or its pending flag, which can be dropped or reset in the ad round-trip.
   if (!/^c[a-f0-9]{24}$/.test(postedCh)) { await trace(req, "VERIFY reject: bad/empty ch"); return res.json({ ok: false, reason: "No checkpoint is waiting for verification." }); }
   const meta = str(await redis.get("chal:" + postedCh));
   const parts = meta.split("|");
@@ -1848,8 +1748,6 @@ app.post("/checkpoint/verify", wrap(async (req, res) => {
 
   const since = Date.now() - issuedAt;
 
-  // Real bot signals -> strike. (No UA check: in-app vs system browser handoffs after the ad
-  // legitimately change the UA; the challenge + proof-of-work + hold already prove a real human.)
   if (body.wd === true) return fail("automated browser.");
   if (body.hp) return fail("bot activity.");
   if (since < 2500) return fail("verification was too fast.");
@@ -1858,35 +1756,27 @@ app.post("/checkpoint/verify", wrap(async (req, res) => {
   const hash = crypto.createHash("sha256").update(postedCh + nonce).digest("hex");
   if (!hash.startsWith("0".repeat(POW_DIFFICULTY))) return fail("invalid security check.");
 
-  // Passed. Advance this session to checkpoint n and consume the challenge. Clear "armed" so the
-  // same completed ad can't be replayed to skip the next checkpoint.
   await redis.del("chal:" + postedCh);
   await patchSession(sid, { step: n, pending: 0, challenge: "", chAt: 0, armed: 0 });
   await trace(req, `VERIFY OK cp${n} sid=${sid.slice(0, 6)} step->${n}, next=/getkey?done=${n}`);
-  // Re-anchor the cookie to this session so the next checkpoint's Get Key page tracks it, even if
-  // the ad round-trip landed the verify POST in a different cookie context.
+
   res.setHeader("Set-Cookie", cookieHeader(sid));
-  // Carry the sid in the URL too, so the next Get Key load keeps the session even if the
-  // browser dropped our cookie (the cause of progress resetting to Checkpoint 1).
+
   res.json({ ok: true, next: "/getkey?done=" + n + "&s=" + sid });
 }));
 
-// Ad-blocker bait: named like an ad so blockers refuse it. If it loads, no blocker is active.
 app.get("/ads.js", (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   res.type("application/javascript").send("window.__adsok=true;");
 });
 
-// Build marker so you can confirm which version Vercel is actually running.
-app.get("/version", (req, res) => res.json({ build: "cp-loader-top-v13b", checkpoints: CHECKPOINTS.length }));
+app.get("/version", (req, res) => res.json({ build: "cp-12h-keys-v14", checkpoints: CHECKPOINTS.length }));
 
-// Debug: the server's step-by-step log of what happened on your recent requests (newest first).
 app.get("/trace", wrap(async (req, res) => {
   const log = await redis.lrange("trace:" + getIp(req), 0, 60);
   res.type("text/plain").send((log || []).join("\n") || "(no events yet — do a run, then refresh this page)");
 }));
 
-// Debug: shows how the server resolves your session right now (cookie vs URL vs IP bridge).
 app.get("/whoami", wrap(async (req, res) => {
   const cookieSid = getCookie(req, "ks_sid");
   const urlSid = req.query ? str(req.query.s) : "";
@@ -1901,8 +1791,6 @@ app.get("/whoami", wrap(async (req, res) => {
   });
 }));
 
-// Start completely fresh (clears your checkpoint session + IP bridge) so you re-do every checkpoint.
-// Handy for testing. NOTE: this is /clear, NOT /reset -- /reset is the public "Reset HWID" page.
 app.get("/clear", wrap(async (req, res) => {
   const s = await getSession(req);
   const cookieSid = getCookie(req, "ks_sid");
@@ -1915,10 +1803,8 @@ app.get("/clear", wrap(async (req, res) => {
   res.redirect("/getkey");
 }));
 
-// Old link still works
 app.get("/generate-key", (req, res) => res.redirect("/getkey"));
 
-// ===== CHECK KEY (called by your script) =====
 app.post("/check-key", wrap(async (req, res) => {
   const key = str(req.body && req.body.key);
   const hwid = str(req.body && req.body.hwid);
@@ -1936,7 +1822,6 @@ app.post("/check-key", wrap(async (req, res) => {
   res.json({ valid: false, reason: "invalid_or_expired" });
 }));
 
-// ===== KEY CHECKER =====
 app.get("/checker", (req, res) => {
   const pre = KEY_RE.test(str(req.query && req.query.key).toUpperCase()) ? str(req.query.key).toUpperCase() : "";
   res.send(page("Key Checker", `
@@ -1982,7 +1867,6 @@ app.get("/checker", (req, res) => {
               + row("Device", devTxt)
               + '</div>'
               + (d.hwidLocked && !d.blacklisted ? '<button id="reset" class="ghost" style="width:100%;margin:12px 0 0">Reset HWID</button>' : '');
-           
 
             if (!d.lifetime) {
               var left = d.expiresIn;
@@ -2004,7 +1888,7 @@ app.get("/checker", (req, res) => {
                 msg.textContent = dd.reason === "cooldown"
                   ? "Reset on cooldown. Try again in " + Math.ceil(dd.retryInSeconds / 60) + " minutes."
                   : "Invalid or expired key.";
-               
+
               } catch (e) { msg.className = "msg err"; msg.textContent = "Network error, try again."; }
             };
           } catch (e) { msg.className = "msg err"; msg.textContent = "Network error, try again."; }
@@ -2039,7 +1923,6 @@ app.post("/api/key-status", wrap(async (req, res) => {
   });
 }));
 
-// Old reset page now lives inside the Key Checker
 app.get("/reset", (req, res) => {
   const pre = KEY_RE.test(str(req.query && req.query.key).toUpperCase()) ? str(req.query.key).toUpperCase() : "";
   res.send(page("Reset HWID", `
@@ -2072,8 +1955,6 @@ app.get("/reset", (req, res) => {
     </script>`, "device"));
 });
 
-// ===== USER HWID RESET =====
-
 app.post("/reset-hwid", wrap(async (req, res) => {
   const key = str(req.body && req.body.key);
   if (!KEY_RE.test(key) || await redis.exists("key:" + key) !== 1) {
@@ -2090,7 +1971,6 @@ app.post("/reset-hwid", wrap(async (req, res) => {
   res.json({ success: true });
 }));
 
-// ===== ADMIN API =====
 function requireAdmin(req, res, next) {
   if (!ADMIN_SECRET) return res.status(500).json({ error: "ADMIN_SECRET not set" });
   const a = crypto.createHash("sha256").update(String(req.headers["x-admin-secret"] || "")).digest();
@@ -2166,7 +2046,6 @@ app.post("/admin/api/blacklist", wrap(async (req, res) => {
   const key = str(req.body.key);
   const reason = str(req.body.reason) || "No reason given";
 
-  // Blacklist by key: looks up every HWID bound to it, bans them all, then revokes the key
   if (!hwid && key) {
     const data = await redis.hgetall("key:" + key);
     const dev = data ? deviceInfo(data) : { hwids: [] };
@@ -2192,7 +2071,6 @@ app.post("/admin/api/blacklist-list", wrap(async (req, res) => {
   res.json((await redis.hgetall("blacklist")) || {});
 }));
 
-// Clear all temporary IP bans + strikes (handy during testing / to unblock someone)
 app.post("/admin/api/clear-bans", wrap(async (req, res) => {
   let cleared = 0;
   for (const pattern of ["ban:*", "strikes:*"]) {
@@ -2207,32 +2085,29 @@ app.post("/admin/api/clear-bans", wrap(async (req, res) => {
   res.json({ success: true, bansCleared: cleared });
 }));
 
-// Recently generated keys + total count, for the "Generated Keys" view
 app.post("/admin/api/recent", wrap(async (req, res) => {
   const total = Number(await redis.get("stats:generated")) || 0;
   const raw = (await redis.lrange("recent:keys", 0, 49)) || [];
   const items = raw.map(x => { try { return JSON.parse(x); } catch (e) { return null; } }).filter(Boolean);
 
-  // Mark each key active/expired and its time left (one round-trip via pipeline).
   if (items.length) {
     try {
       const pipe = redis.pipeline();
       items.forEach(it => pipe.ttl("key:" + it.key));
       const ttls = await pipe.exec();
       items.forEach((it, i) => {
-        const t = Number(ttls[i]);          // -2 gone/expired, -1 lifetime, >=0 seconds left
+        const t = Number(ttls[i]);
         it.active = t !== -2;
         it.ttl = t;
       });
     } catch (e) {
-      // fall back: check existence individually
+
       for (const it of items) { it.active = (await redis.exists("key:" + it.key)) === 1; it.ttl = it.active ? -1 : -2; }
     }
   }
   res.json({ total, shown: items.length, items });
 }));
 
-// ===== ADMIN PANEL =====
 app.get("/admin", (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   res.send(page("Admin Panel", `
@@ -2366,7 +2241,6 @@ app.get("/admin", (req, res) => {
     </script>`, "crown"));
 });
 
-// ===== ERRORS =====
 app.use((req, res) => {
   res.status(404).send(page("Not Found", `<h1>404</h1>
     <p class="muted">That page doesn't exist.</p>
