@@ -79,6 +79,7 @@ const GAMES = [
   "Anime Dice",
   "Death Ball",
   "Indo Voice",
+  "Animal Hospital",
   "Break And Steal Egg",
   "Deep Fishing",
   "Loot To Forge",
