@@ -21,6 +21,10 @@
 local Config = {
     Website   = "https://keysystem-obsessionhub.vercel.app",      -- your key site (NO trailing slash)
     GetKeyURL = "https://keysystem-obsessionhub.vercel.app/getkey", -- where users get a key
+
+    -- Base folder (raw) where your script files live. Each script below just uses its file name,
+    -- so you don't paste a long raw link every time. CHANGE "KeySystem" if your repo has another name.
+    ScriptBase = "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/src/",
     Discord   = "https://discord.gg/D8SM7VfTKZ",      -- "" to hide the button
     Youtube   = "https://www.youtube.com/@jirombv",    -- "" to hide the button
     Premium   = "https://discord.gg/D8SM7VfTKZ",      -- Buy Premium link ("" to hide)
@@ -40,24 +44,22 @@ local Config = {
     --   universal   = true -> used for ANY game when no specific script matches
     -- To find a Place ID: open the game's Roblox page, the number in the URL
     -- (roblox.com/games/XXXXXXXXXX/...) is the Place ID.
-    -- Each entry can list the Place ID AND the Universe ID -- the loader matches either one.
-    -- Listing the Universe ID also catches any other place inside that same game.
-    -- Format per game:  placeIds = { <Place ID>, <Universe ID> }
+    -- "file" = the script's file name inside your src/ folder (added onto ScriptBase above).
+    -- placeIds = { <Place ID>, <Universe ID> } -- the loader matches either one.
     Scripts = {
-        { name = "Tap Simulator",         url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/TapSimulator.lua",         requiresKey = true, placeIds = { 72858262610964, 10629695169 } },
-        { name = "Death Ball",            url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/BladeBall.lua",            requiresKey = false, placeIds = { 15002061926, 5166944221 } },
-        { name = "Break And Steal An Egg", url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/BreakAndSteal.lua",        requiresKey = false, placeIds = { 114326934417838, 10765288803 } },
-        { name = "Anime Dice",            url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/AnimeDice.lua",             requiresKey = false, placeIds = { 113290951185459, 10708913337 } },
-        { name = "Steal An Egg",          url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/StealAnEgg.lua",            requiresKey = false, placeIds = { 107778070777162, 10563114921 } },
-        { name = "Strafe Fps",            url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/StrafeFps.lua",             requiresKey = true, placeIds = { 109020905733214, 9187332740 } },
-        { name = "Ride A Pet",            url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/RideAPet.lua",              requiresKey = false, placeIds = { 124216119978534, 10035204815 } },
-        { name = "Deep Fishing",          url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/DeepFishing.lua",           requiresKey = false, placeIds = { 132239307080610, 10526853622 } },
-        { name = "Gun Forge",             url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/GunForge.lua",              requiresKey = false, placeIds = { 75687962646869, 10766957927 } },
-        { name = "Vagrant Survival",      url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/VabrantSurvival.lua",       requiresKey = true, placeIds = { 100283815455755, 9224753153 } },
-        { name = "Project Delta",         url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/ProjectDeltaPremium.lua",   requiresKey = true, placeIds = { 7336302630, 2862098693 } },
-        { name = "Loot To Forge",         url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/LootToForge.lua",           requiresKey = true, placeIds = { 118805555015549, 10684750879 } },
-        { name = "Indo Voice",            url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/IndoVoice.lua",             requiresKey = true, placeIds = { 8356562067 } }
-        { name = "Animal Hospital",         url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/AnimalHospital.lua",   requiresKey = true, placeIds = { 78515283254292, 10148749921 } },
+        { name = "Tap Simulator",          file = "TSR.lua", requiresKey = true, placeIds = { 72858262610964, 10629695169 } },
+        { name = "Death Ball",             file = "DB.lua",  requiresKey = true, placeIds = { 15002061926, 5166944221 } },
+        { name = "Break And Steal An Egg", file = "BAS.lua", requiresKey = true, placeIds = { 114326934417838, 10765288803 } },
+        { name = "Anime Dice",             file = "AD.lua",  requiresKey = true, placeIds = { 113290951185459, 10708913337 } },
+        { name = "Steal An Egg",           file = "SAE.lua", requiresKey = true, placeIds = { 107778070777162, 10563114921 } },
+        { name = "Strafe Fps",             file = "SF.lua",  requiresKey = true, placeIds = { 109020905733214, 9187332740 } },
+        { name = "Ride A Pet",             file = "RAP.lua", requiresKey = true, placeIds = { 124216119978534, 10035204815 } },
+        { name = "Deep Fishing",           file = "DF.lua",  requiresKey = true, placeIds = { 132239307080610, 10526853622 } },
+        { name = "Gun Forge",              file = "GF.lua",  requiresKey = true, placeIds = { 75687962646869, 10766957927 } },
+        { name = "Vagrant Survival",       file = "VS.lua",  requiresKey = true, placeIds = { 100283815455755, 9224753153 } },
+        { name = "Project Delta",          file = "PD.lua",  requiresKey = true, placeIds = { 7336302630, 2862098693 } },
+        { name = "Loot To Forge",          file = "LTF.lua", requiresKey = true, placeIds = { 118805555015549, 10684750879 } },
+        { name = "Indo Voice",             file = "IV.lua",  requiresKey = true, placeIds = { 8356562067 } }
     },
 
     -- Optional image shown at the top of the loader. Use YOUR OWN art.
@@ -174,10 +176,16 @@ local function verifyKey(key)
     return false, reasons[data.reason] or "Key is invalid or expired"
 end
 
+-- Build the full raw URL for a script entry (base + file name), or use a full url if given.
+local function scriptUrl(entry)
+    if entry.url and entry.url ~= "" then return entry.url end
+    return (Config.ScriptBase or "") .. (entry.file or "")
+end
+
 -- Fetch + run a script
 local function loadScript(entry)
     local src
-    local ok = pcall(function() src = game:HttpGet(entry.url, true) end)
+    local ok = pcall(function() src = game:HttpGet(scriptUrl(entry), true) end)
     if not ok or not src or #src < 1 then
         notify("ObsessionHub", "Couldn't download: " .. entry.name, 5)
         return false
