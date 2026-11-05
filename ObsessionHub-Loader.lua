@@ -57,6 +57,7 @@ local Config = {
         { name = "Project Delta",         url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/ProjectDeltaPremium.lua",   requiresKey = true, placeIds = { 7336302630, 2862098693 } },
         { name = "Loot To Forge",         url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/LootToForge.lua",           requiresKey = true, placeIds = { 118805555015549, 10684750879 } },
         { name = "Indo Voice",            url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/IndoVoice.lua",             requiresKey = true, placeIds = { 8356562067 } }
+        { name = "Animal Hospital",         url = "https://raw.githubusercontent.com/LazyJiroHub/LazyHub/refs/heads/main/Folder/AnimalHospital.lua",   requiresKey = true, placeIds = { 78515283254292, 10148749921 } },
     },
 
     -- Optional image shown at the top of the loader. Use YOUR OWN art.
