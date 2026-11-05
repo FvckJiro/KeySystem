@@ -61,7 +61,7 @@ local Config = {
         { name = "LTF",          file = "LTF.lua", requiresKey = true, placeIds = { 118805555015549, 10684750879 } },
         { name = "AH",          file = "AH.lua", requiresKey = true, placeIds = { 10148749921, 78515283254292 } },
         { name = "IV",             file = "IV.lua",  requiresKey = true, placeIds = { 8356562067 } },
-        { name = "TFFA",             file = "TFFA.lua",  requiresKey = true, placeIds = { 120219252362013 } }
+        { name = "TFFA",             file = "TFFA.lua",  requiresKey = false, placeIds = { 120219252362013 } }
     },
 
     -- Optional image shown at the top of the loader. Use YOUR OWN art.
