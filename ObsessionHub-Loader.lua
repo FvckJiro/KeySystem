@@ -19,8 +19,8 @@
 
 --========================[ CONFIG — EDIT THIS ]========================--
 local Config = {
-    Website   = "https://keysystem-obsessionhub.vercel.app",      -- your key site (NO trailing slash)
-    GetKeyURL = "https://keysystem-obsessionhub.vercel.app/getkey", -- where users get a key
+    Website   = "https://obsessionhub.vercel.app/",      -- your key site (NO trailing slash)
+    GetKeyURL = "https://obsessionhub.vercel.app//getkey", -- where users get a key
 
     -- Base folder (raw) where your script files live. Each script below just uses its file name,
     -- so you don't paste a long raw link every time. CHANGE "KeySystem" if your repo has another name.
