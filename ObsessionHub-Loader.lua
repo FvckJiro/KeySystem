@@ -49,7 +49,7 @@ local Config = {
     Scripts = {
         { name = "TS",          file = "TSR.lua", requiresKey = true, placeIds = { 72858262610964, 10629695169 } },
         { name = "DB",             file = "DB.lua",  requiresKey = false, placeIds = { 15002061926, 5166944221 } },
-        { name = "BASE", file = "BAS.lua", requiresKey = false, placeIds = { 114326934417838, 10765288803 } },
+        { name = "BAS", file = "BAS.lua", requiresKey = false, placeIds = { 114326934417838, 10765288803 } },
         { name = "AD",             file = "AD.lua",  requiresKey = false, placeIds = { 113290951185459, 10708913337 } },
         { name = "SAE",           file = "SAE.lua", requiresKey = false, placeIds = { 107778070777162, 10563114921 } },
         { name = "SF",             file = "SF.lua",  requiresKey = false, placeIds = { 109020905733214, 9187332740 } },
