@@ -24,7 +24,7 @@ local Config = {
 
     -- Base folder (raw) where your script files live. Each script below just uses its file name,
     -- so you don't paste a long raw link every time. CHANGE "KeySystem" if your repo has another name.
-    ScriptBase = "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/src/",
+    ScriptBase = "https://raw.githubusercontent.com/FvckJiro/KeySystem/refs/heads/main/src/",
     Discord   = "https://discord.gg/D8SM7VfTKZ",      -- "" to hide the button
     Youtube   = "https://www.youtube.com/@jirombv",    -- "" to hide the button
     Premium   = "https://discord.gg/D8SM7VfTKZ",      -- Buy Premium link ("" to hide)
