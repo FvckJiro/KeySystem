@@ -69,6 +69,8 @@ const GAMES = [
   "Loot To Forge",
   "Project Delta",
   "Steal An Egg",
+  "Dueling Grounds",
+  "Kick An Uma",
   "Ride A Pet",
   "Strafe Fps",
   "Tap Simulator",
