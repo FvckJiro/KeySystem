@@ -51,6 +51,7 @@ local Config = {
         { name = "DB",             file = "DB.lua",  requiresKey = false, placeIds = { 15002061926, 5166944221 } },
         { name = "BASE",             file = "BASE.lua",  requiresKey = false, placeIds = { 114326934417838, 10765288803 } },
         { name = "AD",             file = "AD.lua",  requiresKey = false, placeIds = { 113290951185459, 10708913337 } },
+        { name = "KAU",             file = "KAU.lua",  requiresKey = false, placeIds = { 74968636725538, 10759415852 } },
         { name = "DG",             file = "DG.lua",  requiresKey = false, placeIds = { 94217045453265, 9051406594 } },
         { name = "SAE",           file = "SAE.lua", requiresKey = false, placeIds = { 107778070777162, 10563114921 } },
         { name = "SF",             file = "SF.lua",  requiresKey = false, placeIds = { 109020905733214, 9187332740 } },
