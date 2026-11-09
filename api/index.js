@@ -33,8 +33,8 @@ const TIERS = [
   { id: "lv-3h",  provider: "Linkvertise", hours: 3,  links: ["https://link-center.net/10011031/ZhQiocvCvyBI"] },
   { id: "wi-6h",  provider: "work.ink",    hours: 6,  links: ["https://work.ink/2omP/checkpoint-1"] },
   { id: "wi-12h", provider: "work.ink",    hours: 12, links: ["https://work.ink/2omP/checkpoint-1", "https://work.ink/2omP/checkpoint--2"] },
-  { id: "wi-1d",  provider: "work.ink",    hours: 24, links: ["https://work.ink/2omP/checkpoint-1", "https://work.ink/2omP/checkpoint--2", ""] },
-  { id: "wi-2d",  provider: "work.ink",    hours: 48, links: ["https://work.ink/2omP/checkpoint-1", "https://work.ink/2omP/checkpoint--2", "", "", ""] },
+  { id: "wi-1d",  provider: "work.ink",    hours: 24, links: ["https://work.ink/2omP/checkpoint-1", "https://work.ink/2omP/checkpoint--2", "https://work.ink/2omP/checkpoint3"] },
+  { id: "wi-5d",  provider: "work.ink",    hours: 120, links: ["https://work.ink/2omP/checkpoint-1", "https://work.ink/2omP/checkpoint--2", "https://work.ink/2omP/checkpoint3", "https://work.ink/2omP/checkpoint-4", "https://work.ink/2omP/checkpoint-5"] },
 ];
 function tierById(id) { return TIERS.find(t => t.id === id) || null; }
 function usableTiers() { return TIERS.filter(t => t.links.length && t.links.every(Boolean)); }
