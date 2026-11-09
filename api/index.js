@@ -30,7 +30,7 @@ const SITE_NAME = "ObsessionHub";
 // A tier only appears when EVERY one of its links is filled in (half-finished tiers stay hidden).
 const TIERS = [
   // id         provider name   key lasts        checkpoint links (fill ALL to enable this option)
-  { id: "lv-3h",  provider: "Linkvertise", hours: 3,  links: ["https://link-target.net/10011031/LW4y4p3qqDQi"] },
+  { id: "lv-3h",  provider: "Linkvertise", hours: 3,  links: ["https://link-center.net/10011031/ZhQiocvCvyBI"] },
   { id: "wi-6h",  provider: "work.ink",    hours: 6,  links: ["https://work.ink/2omP/checkpoint-1"] },
   { id: "wi-12h", provider: "work.ink",    hours: 12, links: ["https://work.ink/2omP/checkpoint-1", "https://work.ink/2omP/checkpoint--2"] },
   { id: "wi-1d",  provider: "work.ink",    hours: 24, links: ["https://work.ink/2omP/checkpoint-1", "https://work.ink/2omP/checkpoint--2", ""] },
