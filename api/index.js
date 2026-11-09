@@ -54,7 +54,7 @@ const BIND_IP = false;
 const MAX_STRIKES = 3;
 const BAN_SECONDS = 5 * 60 * 60;
 
-const REDSQUARE_API_KEY = process.env.REDSQUARE_API_KEY || "";
+const REDSQUARE_API_KEY = process.env.REDSQUARE_API_KEY || "kys_sk_J3ByVi8WZs6nysuogwRQYs9S3fzxhdk7";
 const REDSQUARE_ENABLED = !!REDSQUARE_API_KEY;
 const REDSQUARE_HOST = process.env.REDSQUARE_HOST || "kys.linkvertise.lol";
 const REDSQUARE_TIMEOUT_MS = 4000;
