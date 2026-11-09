@@ -30,7 +30,7 @@ const SITE_NAME = "ObsessionHub";
 // A tier only appears when EVERY one of its links is filled in (half-finished tiers stay hidden).
 const TIERS = [
   // id         provider name   key lasts        checkpoint links (fill ALL to enable this option)
-  { id: "lv-3h",  provider: "Linkvertise", hours: 3,  links: ["https://link-center.net/10011031/ZhQiocvCvyBI"] },
+  { id: "lv-3h",  provider: "Linkvertise", hours: 3,  links: ["https://link-target.net/10011031/LW4y4p3qqDQi"] },
   { id: "wi-6h",  provider: "work.ink",    hours: 6,  links: ["https://work.ink/2omP/checkpoint-1"] },
   { id: "wi-12h", provider: "work.ink",    hours: 12, links: ["https://work.ink/2omP/checkpoint-1", "https://work.ink/2omP/checkpoint--2"] },
   { id: "wi-1d",  provider: "work.ink",    hours: 24, links: ["https://work.ink/2omP/checkpoint-1", "https://work.ink/2omP/checkpoint--2", ""] },
@@ -54,7 +54,7 @@ const BIND_IP = false;
 const MAX_STRIKES = 3;
 const BAN_SECONDS = 5 * 60 * 60;
 
-const REDSQUARE_API_KEY = process.env.REDSQUARE_API_KEY || "kys_sk_OW66zjK...";
+const REDSQUARE_API_KEY = process.env.REDSQUARE_API_KEY || "";
 const REDSQUARE_ENABLED = !!REDSQUARE_API_KEY;
 const REDSQUARE_HOST = process.env.REDSQUARE_HOST || "kys.linkvertise.lol";
 const REDSQUARE_TIMEOUT_MS = 4000;
@@ -1532,6 +1532,33 @@ app.get("/change", wrap(async (req, res) => {
   res.redirect("/getkey?s=" + s.sid);
 }));
 
+// "You already have a key" page — shown when a user tries to get another while one is live.
+function keyStillActivePage(key, ttl, total) {
+  const t = total || 1;
+  return cpPage("Key Still Active", `
+    <h1>You Already Have a Key</h1>
+    <p class="muted" style="margin:-2px 0 12px">One active key per user — you can't get another until this one expires.</p>
+    ${ring(t, t, `${ICONS.check}<small>ACTIVE</small>`)}
+    <div class="chip" style="margin-top:4px">Expires in <span id="exp" data-ttl="${ttl}">--</span></div>
+    <p class="muted" style="margin-top:16px;font-size:.88rem">Your key is already active — use the one you've got.<br>Come back after it expires to get a new one.<br>
+    <a href="/">Home</a></p>
+    <script>
+      (function(){
+        var exp=document.getElementById("exp"),left=+exp.dataset.ttl;
+        function tick(){var h=Math.floor(left/3600),m=Math.floor(left%3600/60),s=left%60;exp.textContent=(h<10?"0":"")+h+":"+(m<10?"0":"")+m+":"+(s<10?"0":"")+s;if(left>0)left--;}
+        tick();setInterval(tick,1000);
+      })();
+    </script>`, { done: t, total: t, mode: "complete" });
+}
+
+// Returns the user's live key (own session key or the one bound to their IP), or null.
+async function liveKeyFor(req, s) {
+  if (s && s.key && (await redis.exists("key:" + s.key)) === 1) return s.key;
+  const held = str(await redis.get("userkey:" + getIp(req)));
+  if (held && (await redis.exists("key:" + held)) === 1) return held;
+  return null;
+}
+
 app.get("/getkey", wrap(async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   if (await isBanned(req)) return res.status(403).send(bannedPage());
@@ -1546,6 +1573,18 @@ app.get("/getkey", wrap(async (req, res) => {
   const existing = await getSession(req);
   const s = existing || (await newSession(req, res));
   res.setHeader("Set-Cookie", cookieHeader(s.sid));
+
+  // Block the moment they press Get Key if they already hold a live key — unless this very
+  // request is the one finishing the final checkpoint (done=N just advanced them to the key).
+  const finishing = !!(req.query && req.query.done);
+  if (!finishing) {
+    const live = await liveKeyFor(req, s);
+    if (live) {
+      const ttl = Math.max(0, await redis.ttl("key:" + live));
+      await trace(req, `getkey BLOCK — already holds active key`);
+      return res.send(keyStillActivePage(live, ttl, tierTotal(s.tier) || 1));
+    }
+  }
 
   const inFlow = !!(req.query && (str(req.query.s) || req.query.done));
 
@@ -1586,25 +1625,7 @@ app.get("/getkey", wrap(async (req, res) => {
       const held = str(await redis.get("userkey:" + ip));
       if (held && (await redis.exists("key:" + held)) === 1) {
         const ttl = Math.max(0, await redis.ttl("key:" + held));
-        return res.send(cpPage("Key Still Active", `
-          <h1>You Already Have a Key</h1>
-          <p class="muted" style="margin:-2px 0 12px">One active key per user — you can't get another until this one expires.</p>
-          ${ring(total, total, `${ICONS.check}<small>ACTIVE</small>`)}
-          <div class="key" id="k" data-key="${held}">${held}</div>
-          <button id="copy" class="go ready"><span>Copy Key</span></button>
-          <div class="chip">Expires in <span id="exp" data-ttl="${ttl}">--</span></div>
-          <p class="muted" style="margin-top:14px;font-size:.88rem">Come back after it expires to get a new one.<br>
-          <a href="/checker?key=${held}">Check your key</a> · <a href="/">Home</a></p>
-          <script>
-            (function(){
-              var el=document.getElementById("k"),key=el.dataset.key;
-              var btn=document.getElementById("copy"),label=btn.querySelector("span");
-              btn.onclick=async function(){try{await navigator.clipboard.writeText(key);label.textContent="Copied!";}catch(e){label.textContent="Select & copy manually";}};
-              var exp=document.getElementById("exp"),left=+exp.dataset.ttl;
-              function tick(){var h=Math.floor(left/3600),m=Math.floor(left%3600/60),s=left%60;exp.textContent=(h<10?"0":"")+h+":"+(m<10?"0":"")+m+":"+(s<10?"0":"")+s;if(left>0)left--;}
-              tick();setInterval(tick,1000);
-            })();
-          </script>`, { done: total, total, mode: "complete" }));
+        return res.send(keyStillActivePage(held, ttl, total));
       }
 
       // No live key held -> generate a fresh one (daily cap still applies).
@@ -1989,7 +2010,7 @@ app.get("/ads.js", (req, res) => {
   res.type("application/javascript").send("window.__adsok=true;");
 });
 
-app.get("/version", (req, res) => res.json({ build: "choose-v27", tiers: usableTiers().map(t => `${t.provider} ${durLabel(t.hours)} (${t.links.length})`) }));
+app.get("/version", (req, res) => res.json({ build: "onekey-v29", tiers: usableTiers().map(t => `${t.provider} ${durLabel(t.hours)} (${t.links.length})`) }));
 
 app.get("/trace", wrap(async (req, res) => {
   const log = await redis.lrange("trace:" + getIp(req), 0, 60);
