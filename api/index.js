@@ -30,7 +30,7 @@ const SITE_NAME = "ObsessionHub";
 // A tier only appears when EVERY one of its links is filled in (half-finished tiers stay hidden).
 const TIERS = [
   // id         provider name   key lasts        checkpoint links (fill ALL to enable this option)
-  { id: "lv-3h",  provider: "Linkvertise", hours: 3,  links: [""https://direct-link.net/10011031/B72fEGbf5kYG""] },
+  { id: "lv-3h",  provider: "Linkvertise", hours: 3,  links: ["https://link-target.net/10011031/LW4y4p3qqDQi"] },
   { id: "wi-6h",  provider: "work.ink",    hours: 6,  links: ["https://work.ink/2omP/checkpoint-1"] },
   { id: "wi-12h", provider: "work.ink",    hours: 12, links: ["https://work.ink/2omP/checkpoint-1", "https://work.ink/2omP/checkpoint--2"] },
   { id: "wi-1d",  provider: "work.ink",    hours: 24, links: ["https://work.ink/2omP/checkpoint-1", "https://work.ink/2omP/checkpoint--2", ""] },
@@ -69,7 +69,7 @@ const KEY_MIN_DUR = _utHours.length ? durLabel(Math.min.apply(null, _utHours)) :
 const RESET_COOLDOWN_SECONDS = 12 * 60 * 60;
 const MAX_KEYS_PER_IP_PER_DAY = 5;
 
-const ALLOWED_REFERRERS = ["lootlabs.gg", "work.ink", "linkvertise.com", "linkvertise.net", "link-to.net", "link-hub.net", "direct-link.net", "publisher.linkvertise.com"];
+const ALLOWED_REFERRERS = ["lootlabs.gg", "work.ink", "linkvertise.com", "linkvertise.net", "link-to.net", "link-hub.net", "direct-link.net", "link-target.net", "publisher.linkvertise.com"];
 const ADMIN_SECRET = process.env.ADMIN_SECRET || "";
 
 const TAGLINE = `Get your key, pick your script, and start playing. Keys last up to ${KEY_MAX_DUR}.`;
@@ -1989,7 +1989,7 @@ app.get("/ads.js", (req, res) => {
   res.type("application/javascript").send("window.__adsok=true;");
 });
 
-app.get("/version", (req, res) => res.json({ build: "choose-v25", tiers: usableTiers().map(t => `${t.provider} ${durLabel(t.hours)} (${t.links.length})`) }));
+app.get("/version", (req, res) => res.json({ build: "choose-v27", tiers: usableTiers().map(t => `${t.provider} ${durLabel(t.hours)} (${t.links.length})`) }));
 
 app.get("/trace", wrap(async (req, res) => {
   const log = await redis.lrange("trace:" + getIp(req), 0, 60);
