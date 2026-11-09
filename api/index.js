@@ -809,8 +809,9 @@ function cpPage(title, body, side) {
     complete: "Copy your key and paste it into the script. It locks to your device on first use.",
     choose: "Pick one provider. You only complete the checkpoints for the one you choose.",
   }[mode];
+  const isChoose = mode === "choose";
   let mini = "";
-  for (let i = 0; i < total; i++) mini += `<u class="${i < done ? "d" : i === done ? "c" : ""}"></u>`;
+  if (!isChoose) for (let i = 0; i < total; i++) mini += `<u class="${i < done ? "d" : i === done ? "c" : ""}"></u>`;
 
   return render(`${head(title)}
 <body class="cpl">
@@ -835,6 +836,11 @@ h1{text-shadow:0 0 22px rgba(255,59,78,.35)}
       <a class="logo" href="/">${logo}</a>
       <button class="side-x" type="button" aria-label="Close" onclick="document.body.classList.remove('side-open')">✕</button>
     </div>
+    ${isChoose ? `
+    <div>
+      <div class="side-label">Your hours</div>
+      <div class="side-tip" style="margin-top:0">${ICONS.key}<span>Not chosen yet — pick one on the right to begin. The number of checkpoints depends on what you choose.</span></div>
+    </div>` : `
     <div>
       <div class="side-label">Key progress</div>
       <div class="side-prog"><div class="row2"><b>${done}/${total}</b><span>${pct}%</span></div><div class="bar"><i style="width:${pct}%"></i></div></div>
@@ -843,7 +849,7 @@ h1{text-shadow:0 0 22px rgba(255,59,78,.35)}
       <div class="side-label">Checkpoints</div>
       <div class="steps-v">${sideSteps(done, total, mode)}</div>
     </div>
-    <div class="side-tip">${ICONS.bolt}<span>${tip}</span></div>
+    <div class="side-tip">${ICONS.bolt}<span>${tip}</span></div>`}
     <div class="side-links">
       <a href="/">${ICONS.home}Home</a>
       <a href="/checker">${ICONS.search}Key Checker</a>
@@ -1209,7 +1215,7 @@ function homePage() {
   <section id="how">
     <div class="sec-head reveal"><h2>How to get a key</h2><p>Takes a couple of minutes.</p></div>
     <div class="steps">
-      <div class="tile reveal"><div class="num">1</div><h4>Pick your reward</h4><p>Tap Get Key, choose how long you want your key, then finish its ${cpText}.</p></div>
+      <div class="tile reveal"><div class="num">1</div><h4>Pick your hours</h4><p>Tap Get Key, choose how long you want your key, then finish its ${cpText}.</p></div>
       <div class="tile reveal" style="transition-delay:80ms"><div class="num">2</div><h4>Pass the security check</h4><p>Hold to verify after each checkpoint. It takes a second.</p></div>
       <div class="tile reveal" style="transition-delay:160ms"><div class="num">3</div><h4>Copy your key</h4><p>Paste it in the script. It lasts for the time you picked and locks to your device.</p></div>
     </div>
@@ -1501,7 +1507,7 @@ function tierChoicePage(s, usable) {
   return cpPage("Get Key", `
     <div class="ghead"><div class="gbadge"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"8.5\" cy=\"8.5\" r=\"4.6\"/><path d=\"M11.8 11.8 20 20M16.5 17.5l2.2-2.2M14.4 19.6l1.6-1.6\"/></svg></div></div>
     <h1 style="margin-top:12px">Get Key</h1>
-    <p class="muted" style="margin:-2px 0 0">Pick a reward — a longer key needs more checkpoints</p>
+    <p class="muted" style="margin:-2px 0 0">Pick your hours — a longer key needs more checkpoints</p>
     ${style}
     <div class="tiers">${html}</div>`,
     { done: 0, total: maxT, mode: "choose" });
@@ -1514,6 +1520,15 @@ app.get("/pick/:id", wrap(async (req, res) => {
   if (!p) return res.redirect("/getkey?s=" + s.sid);
   await patchSession(s.sid, { tier: p.id, step: 0, startedAt: 0, pending: 0, challenge: "", chAt: 0, armed: 0 });
   await trace(req, `pick provider=${p.id} sid=${s.sid.slice(0, 6)}`);
+  res.redirect("/getkey?s=" + s.sid);
+}));
+
+// Change the chosen reward: clear the tier + progress, go back to the choice screen.
+app.get("/change", wrap(async (req, res) => {
+  const s = await getSession(req);
+  if (!s) return res.redirect("/getkey");
+  await patchSession(s.sid, { tier: "", step: 0, startedAt: 0, pending: 0, challenge: "", chAt: 0, armed: 0 });
+  await trace(req, `change reward sid=${s.sid.slice(0, 6)}`);
   res.redirect("/getkey?s=" + s.sid);
 }));
 
@@ -1681,6 +1696,8 @@ app.get("/getkey", wrap(async (req, res) => {
       <button id="recheck" class="ghost" style="width:100%;margin:0">Recheck</button>
     </div>
     <p class="muted" style="font-size:.8rem;margin-top:12px">Finish the page that opens and you'll come back here automatically.<br>Bypassers are detected and reset your progress.</p>
+    ${usableTiers().length > 1 ? `<a href="/change?s=${s.sid}" class="chg-link">${ICONS.back || "←"} Change hours</a>
+    <style>.chg-link{display:inline-flex;align-items:center;gap:6px;margin-top:14px;font-size:.84rem;color:#c3abff;text-decoration:none;padding:7px 14px;border-radius:999px;background:rgba(139,92,246,.1);box-shadow:inset 0 0 0 1px rgba(139,92,246,.35);transition:background .15s}.chg-link:hover{background:rgba(139,92,246,.2)}.chg-link svg{width:14px;height:14px}</style>` : ""}
     <div class="warp" id="warp"><div class="spin"></div><b>Entering Checkpoint ${next}</b><small>Hold tight...</small></div>
     ${celebrate ? toast(`Checkpoint ${justDone} complete!`) : retried ? toast(`Let's try Checkpoint ${next} again`) : ""}
     <script>
@@ -1972,7 +1989,7 @@ app.get("/ads.js", (req, res) => {
   res.type("application/javascript").send("window.__adsok=true;");
 });
 
-app.get("/version", (req, res) => res.json({ build: "cooler-v23", tiers: usableTiers().map(t => `${t.provider} ${durLabel(t.hours)} (${t.links.length})`) }));
+app.get("/version", (req, res) => res.json({ build: "choose-v25", tiers: usableTiers().map(t => `${t.provider} ${durLabel(t.hours)} (${t.links.length})`) }));
 
 app.get("/trace", wrap(async (req, res) => {
   const log = await redis.lrange("trace:" + getIp(req), 0, 60);
