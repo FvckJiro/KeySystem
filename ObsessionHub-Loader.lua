@@ -19,12 +19,12 @@
 
 --========================[ CONFIG — EDIT THIS ]========================--
 local Config = {
-    Website   = "https://obsessionhub.vercel.app/",      -- your key site (NO trailing slash)
-    GetKeyURL = "https://obsessionhub.vercel.app//getkey", -- where users get a key
+    Website   = "https://keysystem-obsessionhub.vercel.app",      -- your key site (NO trailing slash)
+    GetKeyURL = "https://keysystem-obsessionhub.vercel.app/getkey", -- where users get a key
 
     -- Base folder (raw) where your script files live. Each script below just uses its file name,
     -- so you don't paste a long raw link every time. CHANGE "KeySystem" if your repo has another name.
-    ScriptBase = "https://raw.githubusercontent.com/FvckJiro/KeySystem/refs/heads/main/src/",
+    ScriptBase = "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/src/",
     Discord   = "https://discord.gg/D8SM7VfTKZ",      -- "" to hide the button
     Youtube   = "https://www.youtube.com/@jirombv",    -- "" to hide the button
     Premium   = "https://discord.gg/D8SM7VfTKZ",      -- Buy Premium link ("" to hide)
@@ -47,24 +47,24 @@ local Config = {
     -- "file" = the script's file name inside your src/ folder (added onto ScriptBase above).
     -- placeIds = { <Place ID>, <Universe ID> } -- the loader matches either one.
     Scripts = {
-        { name = "TS",          file = "TSR.lua", requiresKey = true, placeIds = { 72858262610964, 10629695169 } },
-        { name = "DB",             file = "DB.lua",  requiresKey = false, placeIds = { 15002061926, 5166944221 } },
-        { name = "BASE",             file = "BASE.lua",  requiresKey = false, placeIds = { 114326934417838, 10765288803 } },
-        { name = "AD",             file = "AD.lua",  requiresKey = false, placeIds = { 113290951185459, 10708913337 } },
-        { name = "KAU",             file = "KAU.lua",  requiresKey = false, placeIds = { 74968636725538, 10759415852 } },
-        { name = "DG",             file = "DG.lua",  requiresKey = false, placeIds = { 94217045453265, 9051406594 } },
-        { name = "SAE",           file = "SAE.lua", requiresKey = false, placeIds = { 107778070777162, 10563114921 } },
-        { name = "SF",             file = "SF.lua",  requiresKey = false, placeIds = { 109020905733214, 9187332740 } },
-        { name = "RAP",             file = "RAP.lua", requiresKey = false, placeIds = { 124216119978534, 10035204815 } },
-        { name = "DF",           file = "DF.lua",  requiresKey = false, placeIds = { 132239307080610, 10526853622 } },
-        { name = "GF",              file = "GF.lua",  requiresKey = false, placeIds = { 75687962646869, 10766957927 } },
-        { name = "VS",       file = "VS.lua",  requiresKey = true, placeIds = { 100283815455755, 9224753153 } },
-        { name = "PD",          file = "PD.lua",  requiresKey = true, placeIds = { 7336302630, 2862098693 } },
-        { name = "LTF",          file = "LTF.lua", requiresKey = true, placeIds = { 118805555015549, 10684750879 } },
-        { name = "AH",          file = "AH.lua", requiresKey = true, placeIds = { 10148749921, 78515283254292 } },
-        { name = "BFE",          file = "BFE.lua", requiresKey = true, placeIds = { 74023858073178, 10766620257 } },
-        { name = "IV",             file = "IV.lua",  requiresKey = true, placeIds = { 8356562067 } },
-        { name = "TFFA",             file = "TFFA.lua",  requiresKey = false, placeIds = { 120219252362013 } }
+        { name = "TS",   file = "TSR.lua",  requiresKey = true,  placeIds = { 72858262610964, 10629695169 } },
+        { name = "DB",   file = "DB.lua",   requiresKey = false, placeIds = { 15002061926, 5166944221 } },
+        { name = "BASE", file = "BASE.lua", requiresKey = false, placeIds = { 114326934417838, 10765288803 } },
+        { name = "AD",   file = "AD.lua",   requiresKey = false, placeIds = { 113290951185459, 10708913337 } },
+        { name = "KAU",  file = "KAU.lua",  requiresKey = false, placeIds = { 74968636725538, 10759415852 } },
+        { name = "DG",   file = "DG.lua",   requiresKey = false, placeIds = { 94217045453265, 9051406594 } },
+        { name = "SAE",  file = "SAE.lua",  requiresKey = false, placeIds = { 107778070777162, 10563114921 } },
+        { name = "SF",   file = "SF.lua",   requiresKey = false, placeIds = { 109020905733214, 9187332740 } },
+        { name = "RAP",  file = "RAP.lua",  requiresKey = false, placeIds = { 124216119978534, 10035204815 } },
+        { name = "DF",   file = "DF.lua",   requiresKey = false, placeIds = { 132239307080610, 10526853622 } },
+        { name = "GF",   file = "GF.lua",   requiresKey = false, placeIds = { 75687962646869, 10766957927 } },
+        { name = "VS",   file = "VS.lua",   requiresKey = true,  placeIds = { 100283815455755, 9224753153 } },
+        { name = "PD",   file = "PD.lua",   requiresKey = true,  placeIds = { 7336302630, 2862098693 } },
+        { name = "LTF",  file = "LTF.lua",  requiresKey = true,  placeIds = { 118805555015549, 10684750879 } },
+        { name = "AH",   file = "AH.lua",   requiresKey = true,  placeIds = { 10148749921, 78515283254292 } },
+        { name = "BFE",  file = "BFE.lua",  requiresKey = true,  placeIds = { 74023858073178, 10766620257 } },
+        { name = "IV",   file = "IV.lua",   requiresKey = true,  placeIds = { 8356562067 } },
+        { name = "TFFA", file = "TFFA.lua", requiresKey = false, placeIds = { 120219252362013 } }
     },
 
     -- Optional image shown at the top of the loader. Use YOUR OWN art.
@@ -99,7 +99,7 @@ local T = {
 }
 
 --// Small helpers ------------------------------------------------------
-local KEY_PATTERN = "^OBSESSION%-%w%w%w%w%-%w%w%w%w%-%w%w%w%w$"
+local KEY_PATTERN = "^%u%u%u+%-%w%w%w%w%-%w%w%w%w%-%w%w%w%w$" -- any UPPERCASE prefix (OBSESSION, PREMIUM, ...)
 
 local function notify(title, text, dur)
     pcall(function()
