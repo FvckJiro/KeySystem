@@ -73,8 +73,11 @@ local Config = {
     BannerImage = "",
 
     -- Round logo in the top-left of the key window (your eyes image).
-    -- Upload it to Roblox as a Decal and put the id here, e.g. "rbxassetid://1234567890".
-    LogoImage = "rbxassetid://0",
+    -- Loads your eye image from GitHub (LogoURL below).
+    -- (Works on executors with getcustomasset, e.g. Delta.) Leave "" to turn off.
+    LogoURL = "https://raw.githubusercontent.com/FvckJiro/KeySystem/refs/heads/main/image/eye-logo.png",
+    -- OPTIONAL: a Roblox decal instead, e.g. "rbxassetid://1234567890" (used first if set).
+    LogoImage = "",
 }
 --======================================================================--
 
@@ -595,7 +598,7 @@ o123988.Interactable = true
 o123988.AutomaticSize = Enum.AutomaticSize.None
 o123988.ZIndex = 1
 o123988.LayoutOrder = 0
-o123988.Image = Config.LogoImage
+o123988.Image = Config.LogoImage or ""
 o123988.ImageColor3 = Color3.fromRGB(255, 255, 255) -- white = eyes decal shows true colors; set to 224,31,58 for a red tint
 o123988.ImageTransparency = 0
 o123988.ImageRectOffset = Vector2.new(0, 0)
@@ -2168,9 +2171,40 @@ local function setStatus(txt, col) statusLbl.Text = txt; statusLbl.TextColor3 = 
 
 -- Detected game: real name + icon
 local detected = detectScript()
+-- Clean Roblox game names: drop "[🌍2]" / "(UPD)" style tags and emojis the font can't show.
+local function cleanName(raw)
+    local n = tostring(raw or "")
+    n = n:gsub("%b[]", ""):gsub("%b()", ""):gsub("%b{}", "")
+    n = n:gsub("[\128-\255]+", "")                 -- emojis / symbols
+    n = n:gsub("^[%s%p]+", ""):gsub("[%s|%-]+$", ""):gsub("%s+", " ")
+    if n == "" then n = tostring(raw or "") end
+    return n
+end
+-- Let the name use two lines, then trim with "..." if it's still too long
+gameNameLbl.Size = UDim2.new(0, 122, 0, 28)
+gameNameLbl.Position = UDim2.new(0, 58, 0, 7)
+gameNameLbl.TextWrapped = true
+gameNameLbl.TextYAlignment = Enum.TextYAlignment.Center
+pcall(function() gameNameLbl.TextTruncate = Enum.TextTruncate.AtEnd end)
+gameSubLbl.Position = UDim2.new(0, 58, 0, 37)
+gameNameLbl.Text = "Game " .. tostring(game.PlaceId)
 task.spawn(function()
     local ok, info = pcall(function() return game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId) end)
-    gameNameLbl.Text = (ok and info and info.Name) or ("Game " .. tostring(game.PlaceId))
+    if ok and info and info.Name then gameNameLbl.Text = cleanName(info.Name) end
+end)
+
+-- Logo: a decal if you set one, otherwise download the eye image from LogoURL
+local logoImg = o123988
+task.spawn(function()
+    if Config.LogoImage and Config.LogoImage ~= "" then return end
+    local getAsset = getcustomasset or getsynasset
+    if not getAsset or not writefile or not Config.LogoURL or Config.LogoURL == "" then return end
+    local ok, data = pcall(function() return game:HttpGet(Config.LogoURL, true) end)
+    if not ok or type(data) ~= "string" or #data < 200 or data:sub(1, 1) == "<" or data:find("^404") then return end
+    local path = "ObsessionHub_logo.png"
+    if not pcall(writefile, path, data) then return end
+    local ok2, id = pcall(getAsset, path)
+    if ok2 and id then logoImg.Image = id end
 end)
 pcall(function() gameIcon.Image = "rbxthumb://type=GameIcon&id=" .. tostring(game.GameId) .. "&w=150&h=150" end)
 if detected then
