@@ -25,10 +25,26 @@ const redis = new Redis({
 
 const SITE_NAME = "ObsessionHub";
 
-const CHECKPOINTS = [
-  "https://work.ink/2omP/checkpoint-1",
-  "https://work.ink/2omP/checkpoint--2",
+// TIERS = the options shown in the "Get Key" popup. Each tier is one choice: a provider, how long
+// the key it gives lasts (hours), and its list of checkpoint links. More checkpoints -> longer key.
+// A tier only appears when EVERY one of its links is filled in (half-finished tiers stay hidden).
+const TIERS = [
+  // id         provider name   key lasts        checkpoint links (fill ALL to enable this option)
+  { id: "lv-3h",  provider: "Linkvertise", hours: 3,  links: ["", ""] },
+  { id: "wi-6h",  provider: "work.ink",    hours: 6,  links: ["https://work.ink/2omP/checkpoint-1"] },
+  { id: "wi-12h", provider: "work.ink",    hours: 12, links: ["https://work.ink/2omP/checkpoint-1", "https://work.ink/2omP/checkpoint--2"] },
+  { id: "wi-1d",  provider: "work.ink",    hours: 24, links: ["https://work.ink/2omP/checkpoint-1", "https://work.ink/2omP/checkpoint--2", ""] },
+  { id: "wi-2d",  provider: "work.ink",    hours: 48, links: ["https://work.ink/2omP/checkpoint-1", "https://work.ink/2omP/checkpoint--2", "", "", ""] },
 ];
+function tierById(id) { return TIERS.find(t => t.id === id) || null; }
+function usableTiers() { return TIERS.filter(t => t.links.length && t.links.every(Boolean)); }
+function tierTotal(id) { const t = tierById(id); return t ? t.links.length : 0; }
+function tierLink(id, n) { const t = tierById(id); return (t && t.links[n - 1]) || null; }
+function tierSeconds(id) { const t = tierById(id); return t ? t.hours * 3600 : KEY_TTL_SECONDS; }
+function durLabel(hours) {
+  if (hours % 24 === 0) { const d = hours / 24; return d === 1 ? "1 Day" : d + " Days"; }
+  return hours === 1 ? "1 Hour" : hours + " Hours";
+}
 const MIN_SECONDS_PER_CHECKPOINT = 10;
 const REQUIRE_REFERER = true;
 const CHECK_FETCH_META = true;
@@ -44,15 +60,19 @@ const REDSQUARE_HOST = process.env.REDSQUARE_HOST || "kys.linkvertise.lol";
 const REDSQUARE_TIMEOUT_MS = 4000;
 
 const REDSQUARE_IGNORE = ["referer_missmatch", "DeadHand_MagnusX7"];
-const KEY_TTL_SECONDS = 12 * 60 * 60;
+const KEY_TTL_SECONDS = 12 * 60 * 60;         // fallback only (tiers set their own duration)
 const KEY_HOURS = Math.round(KEY_TTL_SECONDS / 3600);
+// Shortest / longest key a user can earn, from the currently-usable tiers (for the on-page text).
+const _utHours = usableTiers().map(t => t.hours);
+const KEY_MAX_DUR = _utHours.length ? durLabel(Math.max.apply(null, _utHours)) : `${KEY_HOURS} Hours`;
+const KEY_MIN_DUR = _utHours.length ? durLabel(Math.min.apply(null, _utHours)) : `${KEY_HOURS} Hours`;
 const RESET_COOLDOWN_SECONDS = 12 * 60 * 60;
 const MAX_KEYS_PER_IP_PER_DAY = 5;
 
 const ALLOWED_REFERRERS = ["lootlabs.gg", "work.ink", "linkvertise.com", "linkvertise.net", "link-to.net", "link-hub.net", "direct-link.net", "publisher.linkvertise.com"];
 const ADMIN_SECRET = process.env.ADMIN_SECRET || "";
 
-const TAGLINE = `Get your key, pick your script, and start playing. Keys last ${KEY_HOURS} hours.`;
+const TAGLINE = `Get your key, pick your script, and start playing. Keys last up to ${KEY_MAX_DUR}.`;
 const LOGO_URL = "";
 
 const GAMES_BANNER = "";
@@ -64,22 +84,19 @@ const GAMES = [
   "Death Ball",
   "Indo Voice",
   "Animal Hospital",
-  "Break And Steal Egg",
+  "Break And Steal An Egg",
   "Deep Fishing",
   "Loot To Forge",
   "Project Delta",
   "Steal An Egg",
-  "Dueling Grounds",
-  "Kick An Uma",
   "Ride A Pet",
-  "Strafe Fps",
+  "Strafe FPS",
   "Tap Simulator",
   "Gun Forge",
-  "Bike For Egg",
   "Throw Food For Animals",
-  "Vabrant Survival",
-  { name: "Bloxfruit", soon: true },
-  { name: "Slayer2", soon: true },
+  "Vagrant Survival",
+  { name: "Blox Fruits", soon: true },
+  { name: "Slayer 2", soon: true },
 ];
 
 const SCRIPTS = [
@@ -89,20 +106,20 @@ const SCRIPTS = [
 ];
 
 const EXECUTORS = [
-  { name: "Real", platform: "Windows", price: "Free", status: "Working", description: "A modern Roblox development workspace for scripting, testing, and managing projects in one focused IDE..", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/real.png", link: "https://projectreal.gg/" },
-  { name: "Madium", platform: "Windows", price: "Free", status: "Working", description: "One of the best free executor rn.", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/madium.png", link: "https://getmadium.net/" },
-  { name: "Delta", platform: "iOS, Android", price: "Free", status: "Working", description: "Popular free mobile executor for iOs And Android. Easy setup.", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/delta.jpg", link: "https://deltaexploits.gg/delta-executor" },
+  { name: "Real", platform: "Windows", price: "Free", status: "Working", description: "A modern Roblox development workspace for scripting, testing, and managing projects in one focused IDE.", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/real.png", link: "https://projectreal.gg/" },
+  { name: "Madium", platform: "Windows", price: "Free", status: "Working", description: "One of the best free executors right now.", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/madium.png", link: "https://getmadium.net/" },
+  { name: "Delta", platform: "iOS, Android", price: "Free", status: "Working", description: "Popular free mobile executor for iOS and Android. Easy setup.", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/delta.jpg", link: "https://deltaexploits.gg/delta-executor" },
   { name: "Arceus Neo", platform: "iOS, Android", price: "Free", status: "Working", description: "Free executor for iPhone and Android. No key needed.", image: "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/image/arceus.png", link: "https://spdmteam.com/index" },
 ];
 
 const FAQ = [
-  ["How long does a key last?", `Free keys last ${KEY_HOURS} hours. After that, just get a new one.`],
+  ["How long does a key last?", `It depends on the option you pick — from ${KEY_MIN_DUR} up to ${KEY_MAX_DUR}. More checkpoints means a longer key.`],
   ["Why does my key say wrong device?", "Keys lock to the first device that uses them. Open the Key Checker and tap Reset HWID."],
   ["How often can I reset my HWID?", "Once every 12 hours per key."],
   ["Why did I get Bypass Detected?", "Ad bypassers and skipping checkpoints aren't allowed. Start over and complete each checkpoint normally."],
 ];
 
-const KEY_RE = /^OBSESSION-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
+const KEY_RE = /^[A-Z]{3,12}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
 const KEY_PREFIX = "OBSESSION-";
 const KEY_PLACEHOLDER = "OBSESSION-XXXX-XXXX-XXXX";
 const HWID_RE = /^[A-Za-z0-9\-_{}.:]{4,128}$/;
@@ -110,17 +127,18 @@ const HWID_RE = /^[A-Za-z0-9\-_{}.:]{4,128}$/;
 const str = v => (typeof v === "string" ? v.trim() : "");
 const wrap = fn => (req, res, next) => fn(req, res).catch(next);
 
-function randomKey() {
+function randomKey(prefix) {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   const group = n => { let o = ""; for (let i = 0; i < n; i++) o += chars[crypto.randomInt(chars.length)]; return o; };
-  return KEY_PREFIX + group(4) + "-" + group(4) + "-" + group(4);
+  return (prefix || KEY_PREFIX) + group(4) + "-" + group(4) + "-" + group(4);
 }
 
 async function createKey(ttlSeconds, type, opts = {}) {
   const maxdev = Math.min(100, Math.max(1, Math.floor(Number(opts.maxDevices) || 1)));
   const label = (typeof opts.label === "string" ? opts.label.trim() : "").slice(0, 24);
+  const pfx = (typeof opts.prefix === "string" && /^[A-Z]{3,12}$/.test(opts.prefix)) ? opts.prefix + "-" : KEY_PREFIX;
   for (let i = 0; i < 5; i++) {
-    const candidate = randomKey();
+    const candidate = randomKey(pfx);
     if (await redis.hsetnx("key:" + candidate, "created", Date.now()) === 1) {
       const at = Date.now();
       const fields = { type, maxdev };
@@ -789,14 +807,27 @@ function cpPage(title, body, side) {
     ready: "Tap Start, finish the page that opens, and you'll come back here automatically.",
     verifying: "Hold the button to prove you're human. Bypass tools can't pass this step.",
     complete: "Copy your key and paste it into the script. It locks to your device on first use.",
+    choose: "Pick one provider. You only complete the checkpoints for the one you choose.",
   }[mode];
   let mini = "";
   for (let i = 0; i < total; i++) mini += `<u class="${i < done ? "d" : i === done ? "c" : ""}"></u>`;
 
   return render(`${head(title)}
 <body class="cpl">
-<div class="bg"></div><div class="floor"></div><canvas id="embers"></canvas><div class="vignette"></div>
+<div class="bg"></div><div class="aurora"></div><div class="floor"></div><canvas id="embers"></canvas><div class="vignette"></div>
 <script>${SHARED_JS}</script>
+<style>
+/* ---- x1000 cool layer (additive, safe) ---- */
+.aurora{position:fixed;inset:-20% -10% auto -10%;height:70vh;z-index:0;pointer-events:none;opacity:.5;
+  background:radial-gradient(45% 55% at 25% 0%,rgba(224,31,58,.35),transparent 70%),radial-gradient(45% 55% at 80% 10%,rgba(139,92,246,.25),transparent 70%);
+  filter:blur(30px);animation:auroraShift 10s ease-in-out infinite alternate}
+@keyframes auroraShift{to{transform:translateX(4%) translateY(2%) scale(1.06)}}
+.card{animation:cardGlow 4.2s ease-in-out infinite}
+@keyframes cardGlow{0%,100%{box-shadow:0 18px 54px rgba(0,0,0,.5),0 0 26px -12px rgba(224,31,58,.42)}50%{box-shadow:0 18px 54px rgba(0,0,0,.5),0 0 62px -6px rgba(224,31,58,.72)}}
+.ring .val{filter:drop-shadow(0 0 7px rgba(255,59,78,.8))}
+.ring .ctr small{letter-spacing:.14em}
+h1{text-shadow:0 0 22px rgba(255,59,78,.35)}
+</style>
 <div class="scrim" onclick="document.body.classList.remove('side-open')"></div>
 <div class="cpl-wrap">
   <aside class="side">
@@ -1057,7 +1088,7 @@ function listPage(kind) {
   return siteShell(L.title, kind, `
   <header class="page-head">
     <div class="emblem">${ICONS[L.icon]}</div>
-    <span class="eyebrow"><i></i>${items.length} ${L.nav.toLowerCase()}</span>
+    <span class="eyebrow"><i></i>${items.length} ${items.length === 1 ? L.nav.toLowerCase().replace(/s$/, "") : L.nav.toLowerCase()}</span>
     <h1>${L.title}</h1>
     <p>${L.sub}</p>
     ${items.length ? `<div class="search">${ICONS.search}<input id="q" placeholder="Search ${L.nav.toLowerCase()}..." autocomplete="off"></div>` : ""}
@@ -1110,8 +1141,12 @@ function homePage() {
   const discord = safeUrl(DISCORD_URL) ? esc(DISCORD_URL) : "";
   const youtube = safeUrl(YOUTUBE_URL) ? esc(YOUTUBE_URL) : "";
   const emblem = safeUrl(LOGO_URL) ? `<img src="${esc(LOGO_URL)}" alt="">` : ICONS.key;
-  const cpCount = CHECKPOINTS.length;
-  const cpText = cpCount === 1 ? "1 checkpoint" : cpCount ? `${cpCount} checkpoints` : "the checkpoints";
+  const _counts = usableTiers().map(p => p.links.length);
+  const cpCount = _counts.length ? Math.min.apply(null, _counts) : 0;
+  const _maxCp = _counts.length ? Math.max.apply(null, _counts) : 0;
+  const cpText = !_counts.length ? "the checkpoints"
+    : cpCount === _maxCp ? (cpCount === 1 ? "1 checkpoint" : `${cpCount} checkpoints`)
+    : `${cpCount}–${_maxCp} checkpoints`;
 
   const preview = kind => {
     const L = LISTS[kind], items = L.items();
@@ -1139,7 +1174,7 @@ function homePage() {
   const faq = FAQ.map(([q, a], i) => `
     <details class="reveal" style="transition-delay:${i * 60}ms"><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join("");
 
-  const ticker = ["Keys online", `${GAMES.length} games supported`, "HWID locked", "Anti-bypass active", `${KEY_HOURS}h keys`, "Lifetime keys available", "Key checker live"]
+  const ticker = ["Keys online", `${GAMES.length} games supported`, "HWID locked", "Anti-bypass active", `Keys up to ${KEY_MAX_DUR}`, "Lifetime keys available", "Key checker live"]
     .map(t => `<span><b>◆</b> ${t}</span>`).join("");
 
   return siteShell("Home", "home", `
@@ -1174,9 +1209,9 @@ function homePage() {
   <section id="how">
     <div class="sec-head reveal"><h2>How to get a key</h2><p>Takes a couple of minutes.</p></div>
     <div class="steps">
-      <div class="tile reveal"><div class="num">1</div><h4>Complete ${cpText}</h4><p>Tap Get Key and finish each short checkpoint in order.</p></div>
+      <div class="tile reveal"><div class="num">1</div><h4>Pick your reward</h4><p>Tap Get Key, choose how long you want your key, then finish its ${cpText}.</p></div>
       <div class="tile reveal" style="transition-delay:80ms"><div class="num">2</div><h4>Pass the security check</h4><p>Hold to verify after each checkpoint. It takes a second.</p></div>
-      <div class="tile reveal" style="transition-delay:160ms"><div class="num">3</div><h4>Copy your key</h4><p>Paste it in the script. It lasts ${KEY_HOURS} hours and locks to your device.</p></div>
+      <div class="tile reveal" style="transition-delay:160ms"><div class="num">3</div><h4>Copy your key</h4><p>Paste it in the script. It lasts for the time you picked and locks to your device.</p></div>
     </div>
   </section>
 
@@ -1262,6 +1297,7 @@ function hydrate(sid, s) {
     challenge: String(s.challenge || ""),
     chAt: Number(s.chAt) || 0,
     armed: Number(s.armed) || 0,
+    tier: String(s.tier || ""),
   };
 }
 
@@ -1298,7 +1334,7 @@ async function getSession(req) {
 
 async function newSession(req, res) {
   const sid = crypto.randomBytes(16).toString("hex");
-  const fresh = { step: 0, startedAt: 0, ua: uaHash(req), ip: getIp(req), pending: 0, challenge: "", chAt: 0, armed: 0, key: "" };
+  const fresh = { step: 0, startedAt: 0, ua: uaHash(req), ip: getIp(req), pending: 0, challenge: "", chAt: 0, armed: 0, key: "", tier: "" };
   await saveSession(sid, fresh);
 
   res.setHeader("Set-Cookie", cookieHeader(sid));
@@ -1380,12 +1416,112 @@ function socials() {
 
 const toast = text => `<div class="toast" id="toast"><i>✓</i>${esc(text)}</div>`;
 
+// Separate screen: pick which provider to go through (shown only when 2+ providers are usable).
+function tierChoicePage(s, usable) {
+  // group the tiers by provider, keeping config order
+  const groups = [];
+  for (const t of usable) {
+    let g = groups.find(x => x.provider === t.provider);
+    if (!g) { g = { provider: t.provider, tiers: [] }; groups.push(g); }
+    g.tiers.push(t);
+  }
+  const ACCENT = { "work.ink": "#8b5cf6", "Linkvertise": "#17b9d6" };
+  const clock = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+  const arrow = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+  const bolt = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4 14h6l-1 8 9-12h-6z"/></svg>';
+  const html = groups.map(g => {
+    const ac = ACCENT[g.provider] || "#ff3b4e";
+    const rows = g.tiers.map((t, i) => {
+      const c = t.links.length;
+      const best = g.tiers.length > 1 && i === g.tiers.length - 1;
+      let dots = "";
+      for (let k = 0; k < c; k++) dots += '<i></i>';
+      return `<a class="tier${best ? " best" : ""}" href="/pick/${t.id}?s=${s.sid}" style="--ac:${ac}">
+        <span class="tshine"></span>
+        <span class="tic"><span class="ticring"></span>${clock}</span>
+        <span class="tmeta">
+          <span class="tdur">${durLabel(t.hours)}${best ? '<em class="best-badge">BEST VALUE</em>' : ""}</span>
+          <span class="tcps"><span class="dots">${dots}</span>${c} checkpoint${c > 1 ? "s" : ""}</span>
+        </span>
+        <span class="tarw">${arrow}</span>
+      </a>`;
+    }).join("");
+    return `<div class="tgroup">
+      <div class="tglabel"><span class="pdot2" style="--ac:${ac}"></span>${esc(g.provider)}</div>
+      <div class="trow">${rows}</div>
+    </div>`;
+  }).join("");
+  const maxT = Math.max.apply(null, usable.map(t => t.links.length));
+  const style = `<style>
+    @property --spin{syntax:'<angle>';inherits:false;initial-value:0deg}
+    .ghead{display:flex;flex-direction:column;align-items:center;gap:12px;margin-top:4px}
+    .gbadge{width:72px;height:72px;border-radius:50%;display:grid;place-items:center;position:relative;color:#c9b4ff;
+      background:radial-gradient(circle at 50% 32%,#2a1a46,#130a20);border:1px solid #4e3184;
+      box-shadow:inset 0 2px 8px rgba(0,0,0,.6),0 0 26px -4px rgba(139,92,246,.8)}
+    .gbadge svg{width:33px;height:33px;filter:drop-shadow(0 0 7px rgba(139,92,246,.7))}
+    .gbadge::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:1.5px solid rgba(139,92,246,.55);animation:emblemPulse 2.6s ease-out infinite}
+    @keyframes emblemPulse{0%{transform:scale(.9);opacity:.7}100%{transform:scale(1.22);opacity:0}}
+    .tiers{display:flex;flex-direction:column;gap:22px;margin-top:22px;text-align:left}
+    .tglabel{display:flex;align-items:center;gap:9px;font-size:11.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#d7bec4;margin:0 0 12px}
+    .pdot2{width:9px;height:9px;border-radius:50%;flex:none;background:var(--ac);box-shadow:0 0 10px -1px var(--ac),0 0 0 3px rgba(255,255,255,.04)}
+    .trow{display:flex;flex-direction:column;gap:13px}
+    .tier{display:flex;align-items:center;gap:15px;text-decoration:none;padding:17px 17px;border-radius:17px;
+      background:linear-gradient(150deg,rgba(255,59,78,.12),rgba(16,8,12,.85));position:relative;overflow:hidden;
+      border:1px solid transparent;transition:transform .14s cubic-bezier(.2,.7,.3,1),box-shadow .22s}
+    /* animated gradient border */
+    .tier::before{content:"";position:absolute;inset:0;border-radius:17px;padding:1.4px;pointer-events:none;z-index:1;opacity:.75;
+      background:conic-gradient(from var(--spin),var(--ac),transparent 35%,transparent 65%,var(--ac));
+      -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:spin 6s linear infinite}
+    .tier.best::before{opacity:1;animation-duration:3.2s}
+    .tier>*{position:relative;z-index:2}
+    .tshine{position:absolute;top:-60%;left:-40%;width:60px;height:220%;z-index:1;pointer-events:none;
+      background:linear-gradient(transparent,rgba(255,255,255,.16),transparent);transform:rotate(18deg);animation:tsweep 4.5s ease-in-out infinite}
+    @keyframes tsweep{0%,60%{left:-40%}100%{left:140%}}
+    .tier:hover{transform:translateY(-3px) scale(1.012);box-shadow:0 14px 34px rgba(0,0,0,.5),0 0 30px -6px var(--ac)}
+    .tier:active{transform:translateY(-1px)}
+    .tic{width:52px;height:52px;border-radius:15px;display:grid;place-items:center;flex:none;color:#fff;position:relative;
+      background:linear-gradient(135deg,var(--ac),rgba(0,0,0,.45));box-shadow:0 0 20px -3px var(--ac),inset 0 1px 0 rgba(255,255,255,.25)}
+    .tic svg{width:25px;height:25px;filter:drop-shadow(0 0 4px rgba(255,255,255,.4))}
+    .ticring{position:absolute;inset:-4px;border-radius:19px;border:1.5px solid var(--ac);opacity:.45;animation:pulsering 2.4s ease-out infinite}
+    @keyframes pulsering{0%{transform:scale(.85);opacity:.6}100%{transform:scale(1.25);opacity:0}}
+    .tmeta{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+    .tdur{font-size:20px;font-weight:900;color:#fff;display:flex;align-items:center;gap:10px;line-height:1.05;letter-spacing:.2px}
+    .best-badge{font-style:normal;font-size:9px;font-weight:900;letter-spacing:.06em;padding:4px 8px;border-radius:999px;color:#0b0608;position:relative;overflow:hidden;
+      background:linear-gradient(90deg,var(--ac),#fff,var(--ac));background-size:200% 100%;animation:shimmer 2.2s linear infinite}
+    @keyframes shimmer{to{background-position:-200% 0}}
+    .tcps{font-size:12.5px;color:#c0a4ab;display:flex;align-items:center;gap:8px}
+    .dots{display:inline-flex;gap:4px}
+    .dots i{width:7px;height:7px;border-radius:50%;background:var(--ac);box-shadow:0 0 7px -1px var(--ac)}
+    .tarw{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;flex:none;color:#fff;
+      background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);transition:background .18s,transform .18s,box-shadow .18s}
+    .tarw svg{width:17px;height:17px}
+    .tier:hover .tarw{background:var(--ac);transform:translateX(3px);box-shadow:0 0 16px -2px var(--ac)}
+    h1{color:#c3abff;text-shadow:0 0 24px rgba(139,92,246,.55)}
+  </style>`;
+  return cpPage("Get Key", `
+    <div class="ghead"><div class="gbadge"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"8.5\" cy=\"8.5\" r=\"4.6\"/><path d=\"M11.8 11.8 20 20M16.5 17.5l2.2-2.2M14.4 19.6l1.6-1.6\"/></svg></div></div>
+    <h1 style="margin-top:12px">Get Key</h1>
+    <p class="muted" style="margin:-2px 0 0">Pick a reward — a longer key needs more checkpoints</p>
+    ${style}
+    <div class="tiers">${html}</div>`,
+    { done: 0, total: maxT, mode: "choose" });
+}
+
+app.get("/pick/:id", wrap(async (req, res) => {
+  const s = await getSession(req);
+  if (!s) return res.redirect("/getkey");
+  const p = usableTiers().find(x => x.id === req.params.id);
+  if (!p) return res.redirect("/getkey?s=" + s.sid);
+  await patchSession(s.sid, { tier: p.id, step: 0, startedAt: 0, pending: 0, challenge: "", chAt: 0, armed: 0 });
+  await trace(req, `pick provider=${p.id} sid=${s.sid.slice(0, 6)}`);
+  res.redirect("/getkey?s=" + s.sid);
+}));
+
 app.get("/getkey", wrap(async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   if (await isBanned(req)) return res.status(403).send(bannedPage());
-  const total = CHECKPOINTS.length;
-
-  if (!total) {
+  const usable = usableTiers();
+  if (!usable.length) {
     return res.send(page("Get Key", `
       <h1>Coming Soon</h1>
       <p class="muted">Checkpoints haven't been set up yet. Check back soon.</p>
@@ -1394,15 +1530,32 @@ app.get("/getkey", wrap(async (req, res) => {
 
   const existing = await getSession(req);
   const s = existing || (await newSession(req, res));
-
   res.setHeader("Set-Cookie", cookieHeader(s.sid));
 
   const inFlow = !!(req.query && (str(req.query.s) || req.query.done));
-  if (!inFlow && s.step > 0 && s.step < total) {
-    await patchSession(s.sid, { step: 0, startedAt: 0, pending: 0, challenge: "", chAt: 0, armed: 0 });
-    s.step = 0; s.startedAt = 0; s.pending = 0; s.challenge = ""; s.armed = 0;
-    await trace(req, `getkey FRESH visit with mid-progress -> reset to 0`);
+
+  // Which provider did they pick? (null if none yet, or it's no longer usable)
+  let prov = tierById(s.tier);
+  if (prov && !usable.some(p => p.id === prov.id)) prov = null;
+
+  // Fresh visit with mid-progress -> restart from the choice screen (clear progress + provider).
+  if (!inFlow && s.step > 0) {
+    await patchSession(s.sid, { step: 0, startedAt: 0, pending: 0, challenge: "", chAt: 0, armed: 0, tier: "" });
+    s.step = 0; s.startedAt = 0; s.pending = 0; s.challenge = ""; s.armed = 0; s.tier = "";
+    prov = null;
+    await trace(req, `getkey FRESH visit -> reset + reselect provider`);
   }
+
+  if (!prov) {
+    if (usable.length === 1) {
+      prov = usable[0];
+      await patchSession(s.sid, { tier: prov.id }); s.tier = prov.id;
+    } else {
+      await trace(req, `getkey -> tier choice (${usable.length} options)`);
+      return res.send(tierChoicePage(s, usable));
+    }
+  }
+  const total = tierTotal(prov.id);
 
   await trace(req, `getkey sid=${s.sid.slice(0, 6)} step=${s.step}${existing ? "" : " (NEW session)"} q.s=${req.query && req.query.s ? str(req.query.s).slice(0, 6) : "-"} done=${req.query.done || "-"}`);
   const justDone = parseInt(req.query.done, 10);
@@ -1410,8 +1563,37 @@ app.get("/getkey", wrap(async (req, res) => {
   const retried = req.query.retry === "1";
 
   if (s.step >= total) {
-    if (!s.key || await redis.exists("key:" + s.key) !== 1) {
-      const ipKey = "ratelimit:" + getIp(req);
+    const ip = getIp(req);
+    const ownActive = s.key && (await redis.exists("key:" + s.key)) === 1;
+
+    if (!ownActive) {
+      // One active key per user: if they still hold a live key from an earlier run, block a new one.
+      const held = str(await redis.get("userkey:" + ip));
+      if (held && (await redis.exists("key:" + held)) === 1) {
+        const ttl = Math.max(0, await redis.ttl("key:" + held));
+        return res.send(cpPage("Key Still Active", `
+          <h1>You Already Have a Key</h1>
+          <p class="muted" style="margin:-2px 0 12px">One active key per user — you can't get another until this one expires.</p>
+          ${ring(total, total, `${ICONS.check}<small>ACTIVE</small>`)}
+          <div class="key" id="k" data-key="${held}">${held}</div>
+          <button id="copy" class="go ready"><span>Copy Key</span></button>
+          <div class="chip">Expires in <span id="exp" data-ttl="${ttl}">--</span></div>
+          <p class="muted" style="margin-top:14px;font-size:.88rem">Come back after it expires to get a new one.<br>
+          <a href="/checker?key=${held}">Check your key</a> · <a href="/">Home</a></p>
+          <script>
+            (function(){
+              var el=document.getElementById("k"),key=el.dataset.key;
+              var btn=document.getElementById("copy"),label=btn.querySelector("span");
+              btn.onclick=async function(){try{await navigator.clipboard.writeText(key);label.textContent="Copied!";}catch(e){label.textContent="Select & copy manually";}};
+              var exp=document.getElementById("exp"),left=+exp.dataset.ttl;
+              function tick(){var h=Math.floor(left/3600),m=Math.floor(left%3600/60),s=left%60;exp.textContent=(h<10?"0":"")+h+":"+(m<10?"0":"")+m+":"+(s<10?"0":"")+s;if(left>0)left--;}
+              tick();setInterval(tick,1000);
+            })();
+          </script>`, { done: total, total, mode: "complete" }));
+      }
+
+      // No live key held -> generate a fresh one (daily cap still applies).
+      const ipKey = "ratelimit:" + ip;
       const count = await redis.incr(ipKey);
       if (count === 1) await redis.expire(ipKey, 86400);
       if (count > MAX_KEYS_PER_IP_PER_DAY) {
@@ -1420,14 +1602,17 @@ app.get("/getkey", wrap(async (req, res) => {
           <p class="muted">You've generated too many keys today. Come back tomorrow.</p>
           <a class="btn" href="/">Back Home</a>`, "clock"));
       }
-      s.key = await createKey(KEY_TTL_SECONDS, "free");
+      const sec = tierSeconds(s.tier);
+      s.key = await createKey(sec, "free");
       await patchSession(s.sid, { key: s.key });
+      await redis.set("userkey:" + ip, s.key, { ex: sec });
     }
     const ttl = Math.max(0, await redis.ttl("key:" + s.key));
 
+    const keyDur = durLabel((tierById(s.tier) || { hours: 0 }).hours || 0);
     return res.send(cpPage("Your Key", `
       <h1>Access Granted</h1>
-      <p class="muted" style="margin:-2px 0 0">All ${total} checkpoints complete</p>
+      <p class="muted" style="margin:-2px 0 0">All ${total} checkpoints complete · ${keyDur} key</p>
       ${ring(total, total, `${ICONS.check}<small>UNLOCKED</small>`)}
       <div class="key" id="k" data-key="${s.key}" data-ttl="${ttl}" data-celeb="${celebrate ? 1 : 0}">${s.key}</div>
       <button id="copy" class="go ready"><span>Copy Key</span></button>
@@ -1474,10 +1659,22 @@ app.get("/getkey", wrap(async (req, res) => {
     s.startedAt = Date.now();
   }
   res.send(cpPage(`Checkpoint ${next}`, `
-    <h1>Checkpoint ${next}</h1>
+    <style>
+      #go{position:relative;overflow:hidden;font-weight:900;letter-spacing:.3px;
+        box-shadow:0 10px 30px -6px rgba(224,31,58,.6),inset 0 1px 0 rgba(255,255,255,.35);animation:goPulse 2.1s ease-in-out infinite}
+      #go:not(.wait)::after{content:"";position:absolute;top:-60%;left:-35%;width:46px;height:220%;pointer-events:none;
+        background:linear-gradient(transparent,rgba(255,255,255,.55),transparent);transform:rotate(18deg);animation:goSweep 2.6s ease-in-out infinite}
+      @keyframes goSweep{0%,62%{left:-35%}100%{left:135%}}
+      @keyframes goPulse{50%{box-shadow:0 10px 34px -4px rgba(224,31,58,.85),inset 0 1px 0 rgba(255,255,255,.35)}}
+      .cp-badge{display:inline-flex;align-items:center;gap:7px;margin:2px 0 -2px;padding:5px 12px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:.08em;
+        color:#ffd9dd;background:linear-gradient(180deg,rgba(138,20,36,.6),rgba(90,12,22,.6));box-shadow:inset 0 0 0 1px rgba(255,92,106,.5),0 0 16px -6px rgba(255,59,78,.8)}
+      .cp-badge i{width:7px;height:7px;border-radius:50%;background:#ff5c6a;box-shadow:0 0 8px #ff5c6a;animation:goPulse 1.4s ease-in-out infinite}
+    </style>
+    <div class="cp-badge"><i></i>CHECKPOINT ${next} OF ${total}</div>
+    <h1 style="margin-top:10px">Checkpoint ${next}</h1>
     <p class="muted" style="margin:-2px 0 0">${s.step} of ${total} complete · ${pct}%</p>
     ${ring(s.step, total, `<b>${s.step}/${total}</b><small>COMPLETE</small>`)}
-    <a class="btn go wait" id="go" href="/go/${next}?s=${s.sid}" data-label="Start Checkpoint ${next} →" data-celeb="${celebrate ? 1 : 0}"><span>Preparing checkpoint...</span></a>
+    <a class="btn go wait" data-go id="go" href="/go/${next}?s=${s.sid}" data-label="Start Checkpoint ${next} →" data-celeb="${celebrate ? 1 : 0}" style="margin-top:10px"><span>Preparing checkpoint...</span></a>
     <div id="adwarn" hidden style="margin-top:14px;padding:14px;border-radius:12px;background:rgba(139,10,26,.35);box-shadow:inset 0 0 0 1px rgba(255,59,78,.5);text-align:left">
       <b style="color:#ff8a96">Ad blocker / bypass tool detected</b>
       <p class="muted" style="font-size:.82rem;margin:6px 0 10px">Turn off your ad blocker or bypass extension, then recheck. The checkpoints won't load otherwise.</p>
@@ -1489,7 +1686,8 @@ app.get("/getkey", wrap(async (req, res) => {
     <script>
       (function(){
         ["warp", "toast"].forEach(function(id){ var e = document.getElementById(id); if (e) document.body.appendChild(e); });
-        var go = document.getElementById("go"), label = go.querySelector("span");
+        var btns = Array.prototype.slice.call(document.querySelectorAll("[data-go]"));
+        function setLabel(b, txt){ var sp = b.querySelector("span"); if (sp) sp.textContent = txt; }
         var adwarn = document.getElementById("adwarn"), blocked = false;
 
         // --- Ad blocker / bypass-tool detection ---
@@ -1517,15 +1715,11 @@ app.get("/getkey", wrap(async (req, res) => {
         }
         function applyBlocked(isBlocked){
           blocked = isBlocked;
-          if (isBlocked){
-            adwarn.hidden = false;
-            go.classList.add("wait"); go.classList.remove("ready");
-            label.textContent = "Disable ad blocker to continue";
-          } else {
-            adwarn.hidden = true;
-            go.classList.remove("wait"); go.classList.add("ready");
-            label.textContent = go.dataset.label;
-          }
+          adwarn.hidden = !isBlocked;
+          btns.forEach(function(b){
+            if (isBlocked){ b.classList.add("wait"); b.classList.remove("ready"); setLabel(b, "Disable ad blocker to continue"); }
+            else { b.classList.remove("wait"); b.classList.add("ready"); setLabel(b, b.dataset.label); }
+          });
         }
         var checked = false;
         function runCheck(){
@@ -1539,17 +1733,19 @@ app.get("/getkey", wrap(async (req, res) => {
 
         // Reveal/enable the Start button after the short arm delay, then run the ad-block check.
         setTimeout(function(){
-          if (!blocked){ go.classList.remove("wait"); go.classList.add("ready"); label.textContent = go.dataset.label; }
+          if (!blocked) btns.forEach(function(b){ b.classList.remove("wait"); b.classList.add("ready"); setLabel(b, b.dataset.label); });
           runCheck();
         }, 3000);
 
-        go.addEventListener("click", function(e){
-          e.preventDefault();
-          if (go.classList.contains("wait") || blocked) return;
-          document.getElementById("warp").classList.add("on");
-          setTimeout(function(){ location.href = go.href; }, 750);
+        btns.forEach(function(b){
+          b.addEventListener("click", function(e){
+            e.preventDefault();
+            if (b.classList.contains("wait") || blocked) return;
+            document.getElementById("warp").classList.add("on");
+            setTimeout(function(){ location.href = b.href; }, 750);
+          });
         });
-        if (go.dataset.celeb === "1") setTimeout(function(){ burst(); }, 600);
+        if (btns[0] && btns[0].dataset.celeb === "1") setTimeout(function(){ burst(); }, 600);
       })();
     </script>`, { done: s.step, total, mode: "ready" }));
 }));
@@ -1558,25 +1754,26 @@ app.get("/go/:n", wrap(async (req, res) => {
   if (await isBanned(req)) return res.status(403).send(bannedPage());
   const n = parseInt(req.params.n, 10);
   const s = await getSession(req);
-  if (!s || n !== s.step + 1 || !CHECKPOINTS[n - 1]) {
-    await trace(req, `go n=${n} REJECTED (s=${!!s} step=${s ? s.step : "?"}) -> /getkey`);
-    return res.redirect("/getkey");
+  const link = s ? tierLink(s.tier, n) : null;   // link for the provider they chose
+  if (!s || !s.tier || n !== s.step + 1 || !link) {
+    await trace(req, `go n=${n} REJECTED (s=${!!s} prov=${s ? s.tier : "?"} step=${s ? s.step : "?"} link=${!!link}) -> /getkey`);
+    return res.redirect(s ? "/getkey?s=" + s.sid : "/getkey");
   }
 
   await patchSession(s.sid, { armed: n, startedAt: Date.now(), pending: 0, challenge: "", chAt: 0 });
-  await trace(req, `go n=${n} sid=${s.sid.slice(0, 6)} armed->${n} -> ${CHECKPOINTS[n - 1]}`);
+  await trace(req, `go n=${n} sid=${s.sid.slice(0, 6)} via=${s.tier} armed->${n} -> ${link}`);
 
   await redis.set("ipsess:" + getIp(req), s.sid, { ex: 20 * 60 });
 
   res.setHeader("Referrer-Policy", "no-referrer");
-  res.redirect(CHECKPOINTS[n - 1]);
+  res.redirect(link);
 }));
 
-function verifyPage(step, n, challenge) {
+function verifyPage(step, n, challenge, total) {
   return cpPage(`Verifying Checkpoint ${n}`, `
     <h1>Verifying</h1>
-    <p class="muted" style="margin:-2px 0 0">Checkpoint ${n} of ${CHECKPOINTS.length}</p>
-    ${ring(step, CHECKPOINTS.length, `${ICONS.shield}<small>SCANNING</small>`, `<div class="sweep"></div>`)}
+    <p class="muted" style="margin:-2px 0 0">Checkpoint ${n} of ${total}</p>
+    ${ring(step, total, `${ICONS.shield}<small>SCANNING</small>`, `<div class="sweep"></div>`)}
     <div class="vsteps">
       <div class="vstep"><i></i>Checking session</div>
       <div class="vstep wait"><i></i>Validating checkpoint</div>
@@ -1651,7 +1848,7 @@ function verifyPage(step, n, challenge) {
           } catch (e) { sent = false; holdLabel.textContent = "Hold to verify"; up(); msg.className = "msg err"; msg.textContent = "Network error, try again."; }
         }
       })();
-    </script>`, { done: step, total: CHECKPOINTS.length, mode: "verifying" });
+    </script>`, { done: step, total: total, mode: "verifying" });
 }
 
 async function handleCheckpointReturn(req, res) {
@@ -1672,9 +1869,11 @@ async function handleCheckpointReturn(req, res) {
 
   res.setHeader("Set-Cookie", cookieHeader(s.sid));
 
-  const total = CHECKPOINTS.length;
+  // No provider chosen yet -> send them to the choice screen instead of a checkpoint.
+  if (!s.tier || !tierTotal(s.tier)) { await trace(req, "-> no provider, back to /getkey"); return res.redirect("/getkey?s=" + s.sid); }
+  const total = tierTotal(s.tier);
   const via = (req.query && SID_RE.test(str(req.query.s))) ? "url" : (SID_RE.test(getCookie(req, "ks_sid")) ? "cookie" : "ipbridge");
-  await trace(req, `checkpoint RETURN sid=${s.sid.slice(0, 6)} via=${via} step=${s.step} armed=${s.armed} pending=${s.pending}`);
+  await trace(req, `checkpoint RETURN sid=${s.sid.slice(0, 6)} via=${via} prov=${s.tier} step=${s.step} armed=${s.armed} pending=${s.pending}`);
 
   if (s.step >= total) { await trace(req, "-> already done, redirect to key"); return res.redirect("/getkey?s=" + s.sid); }
 
@@ -1683,7 +1882,7 @@ async function handleCheckpointReturn(req, res) {
   if (s.pending === target && s.challenge) {
     await trace(req, `-> resume verify for cp${target}`);
     await patchSession(s.sid, { chAt: Date.now() });
-    return res.send(verifyPage(s.step, target, s.challenge));
+    return res.send(verifyPage(s.step, target, s.challenge, total));
   }
 
   const softFail = async why => {
@@ -1715,7 +1914,7 @@ async function handleCheckpointReturn(req, res) {
   await patchSession(s.sid, { pending: target, challenge, chAt: Date.now(), startedAt: 0 });
   await redis.set("chal:" + challenge, s.sid + "|" + target + "|" + Date.now(), { ex: 15 * 60 });
   await trace(req, `-> issued challenge for cp${target}, showing verify`);
-  res.send(verifyPage(s.step, target, challenge));
+  res.send(verifyPage(s.step, target, challenge, total));
 }
 app.get("/checkpoint/:n", wrap(handleCheckpointReturn));
 app.get("/checkpoint", wrap(handleCheckpointReturn));
@@ -1773,7 +1972,7 @@ app.get("/ads.js", (req, res) => {
   res.type("application/javascript").send("window.__adsok=true;");
 });
 
-app.get("/version", (req, res) => res.json({ build: "cp-12h-keys-v14", checkpoints: CHECKPOINTS.length }));
+app.get("/version", (req, res) => res.json({ build: "cooler-v23", tiers: usableTiers().map(t => `${t.provider} ${durLabel(t.hours)} (${t.links.length})`) }));
 
 app.get("/trace", wrap(async (req, res) => {
   const log = await redis.lrange("trace:" + getIp(req), 0, 60);
@@ -1991,6 +2190,8 @@ app.post("/admin/api/create-key", wrap(async (req, res) => {
   const amount = Math.min(50, Math.max(1, Math.floor(Number(req.body.amount) || 1)));
   const devices = Math.min(100, Math.max(1, Math.floor(Number(req.body.devices) || 1)));
   const label = (typeof req.body.label === "string" ? req.body.label.trim() : "").slice(0, 24);
+  const prefixRaw = (typeof req.body.prefix === "string" ? req.body.prefix : "").toUpperCase().replace(/[^A-Z]/g, "");
+  const prefix = /^[A-Z]{3,12}$/.test(prefixRaw) ? prefixRaw : "OBSESSION";
   const ttl = (days * 24 + hours) * 3600 + minutes * 60;
 
   if (!lifetime && ttl <= 0) {
@@ -2006,12 +2207,12 @@ app.post("/admin/api/create-key", wrap(async (req, res) => {
   const type = label ? "custom" : (lifetime ? "lifetime" : "admin");
   const keys = [];
   for (let i = 0; i < amount; i++) {
-    keys.push(await createKey(lifetime ? null : ttl, type, { maxDevices: devices, label }));
+    keys.push(await createKey(lifetime ? null : ttl, type, { maxDevices: devices, label, prefix }));
   }
   res.json({
     success: true,
     duration: lifetime ? "lifetime" : `${days}d ${hours}h ${minutes}m`,
-    devices, label: label || null, keys,
+    devices, label: label || null, prefix, keys,
   });
 }));
 
@@ -2090,8 +2291,8 @@ app.post("/admin/api/clear-bans", wrap(async (req, res) => {
 
 app.post("/admin/api/recent", wrap(async (req, res) => {
   const total = Number(await redis.get("stats:generated")) || 0;
-  const raw = (await redis.lrange("recent:keys", 0, 49)) || [];
-  const items = raw.map(x => { try { return JSON.parse(x); } catch (e) { return null; } }).filter(Boolean);
+  const raw = (await redis.lrange("recent:keys", 0, 99)) || [];
+  let items = raw.map(x => { try { return JSON.parse(x); } catch (e) { return null; } }).filter(Boolean);
 
   if (items.length) {
     try {
@@ -2104,144 +2305,289 @@ app.post("/admin/api/recent", wrap(async (req, res) => {
         it.ttl = t;
       });
     } catch (e) {
-
       for (const it of items) { it.active = (await redis.exists("key:" + it.key)) === 1; it.ttl = it.active ? -1 : -2; }
     }
   }
-  res.json({ total, shown: items.length, items });
+
+  // Only show live keys (generated + still active) — expired keys are hidden.
+  items = items.filter(it => it.active);
+  const activeCount = items.length;
+  res.json({ total, active: activeCount, shown: activeCount, items });
 }));
 
 app.get("/admin", (req, res) => {
   res.setHeader("Cache-Control", "no-store");
-  res.send(page("Admin Panel", `
-    <h1>Admin Panel</h1>
-    <input id="secret" type="password" placeholder="Admin secret" autocomplete="current-password">
-
-    <h3>Create Keys</h3>
-    <div class="row">
-      <input id="days" type="number" min="0" inputmode="numeric" placeholder="Days">
-      <input id="hours" type="number" min="0" inputmode="numeric" placeholder="Hours">
-      <input id="minutes" type="number" min="0" inputmode="numeric" placeholder="Mins">
-      <input id="amount" type="number" min="1" max="50" inputmode="numeric" placeholder="Amount" value="1">
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.send(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ObsessionHub · Admin</title>
+<style>
+  :root{--red:#e01f3a;--red2:#ff3b4e;--violet:#8b5cf6;--bg:#0b0608;--bg2:#0f0a0d;
+    --panel:#17090d;--panel2:#1d0e13;--stroke:#3a1620;--stroke2:#4d1f2b;
+    --text:#f5eaec;--muted:#9a7e85;--good:#5fe39b;--gold:#ffc446;--blue:#5b8cff}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;color:var(--text);font-family:system-ui,"Segoe UI",sans-serif;
+    background:radial-gradient(1100px 500px at 50% -8%,#2a0a12 0%,var(--bg) 60%)}
+  .wrap{max-width:1080px;margin:0 auto;padding:26px 18px 60px}
+  .top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:22px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--red2),#7a0a18);
+    display:grid;place-items:center;font-size:22px;box-shadow:0 0 0 1px var(--stroke2),0 0 20px rgba(255,59,78,.4)}
+  .brand h1{margin:0;font-size:20px;font-weight:900;letter-spacing:.02em;
+    background:linear-gradient(90deg,var(--red2),#fff);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .brand .tag{font-size:11px;color:var(--muted);margin-top:1px}
+  .secret{margin-left:auto;display:flex;align-items:center;gap:8px;background:var(--panel);
+    border:1px solid var(--stroke);border-radius:11px;padding:7px 10px}
+  .secret svg{width:15px;height:15px;color:var(--muted);flex:none}
+  .secret input{background:transparent;border:0;outline:0;color:var(--text);font-size:13px;width:150px}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}
+  .stat{background:linear-gradient(160deg,var(--panel2),var(--panel));border:1px solid var(--stroke);
+    border-radius:14px;padding:14px 16px;position:relative;overflow:hidden}
+  .stat .n{font-size:26px;font-weight:900;line-height:1}
+  .stat .l{font-size:11px;color:var(--muted);margin-top:5px;text-transform:uppercase;letter-spacing:.05em}
+  .stat.g .n{color:var(--good)} .stat.r .n{color:var(--red2)} .stat.v .n{color:var(--violet)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+  @media(max-width:720px){.grid2{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}.secret{margin-left:0;width:100%}.secret input{width:100%}}
+  .card{background:linear-gradient(170deg,var(--panel2),var(--panel));border:1px solid var(--stroke);
+    border-radius:16px;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+  .card h2{margin:0 0 14px;font-size:14px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
+    color:#e9c3ca;display:flex;align-items:center;gap:8px}
+  .card h2 .bar{width:3px;height:14px;border-radius:2px;background:linear-gradient(var(--red2),var(--violet))}
+  label.f{display:block;font-size:11px;color:var(--muted);margin:0 0 5px;text-transform:uppercase;letter-spacing:.04em}
+  input.t{width:100%;background:#0d070a;border:1px solid var(--stroke);border-radius:10px;
+    color:var(--text);font-size:14px;padding:11px 12px;outline:0;transition:border .15s,box-shadow .15s}
+  input.t:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(224,31,58,.18)}
+  input.t::placeholder{color:#6f565d}
+  input.t:disabled{opacity:.4}
+  .row{display:grid;gap:10px;margin-bottom:12px}
+  .r4{grid-template-columns:repeat(4,1fr)} .r2{grid-template-columns:1fr 1fr} .r3{grid-template-columns:repeat(3,1fr)}
+  @media(max-width:520px){.r4{grid-template-columns:1fr 1fr}}
+  .chk{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--text);cursor:pointer;
+    padding:10px 12px;background:#0d070a;border:1px solid var(--stroke);border-radius:10px;margin-bottom:12px}
+  .chk input{width:16px;height:16px;accent-color:var(--red2)}
+  .btns{display:flex;flex-wrap:wrap;gap:8px}
+  button.b{border:0;border-radius:10px;padding:11px 14px;font-weight:800;font-size:13px;cursor:pointer;
+    color:#fff;background:linear-gradient(20deg,var(--red2),#8b0a1a);box-shadow:0 4px 14px rgba(224,31,58,.3);
+    transition:transform .1s,filter .15s;flex:1 1 auto}
+  button.b:hover{filter:brightness(1.1)} button.b:active{transform:translateY(1px)}
+  button.b.v{background:linear-gradient(20deg,var(--violet),#5b32b8);box-shadow:0 4px 14px rgba(139,92,246,.3)}
+  button.b.ghost{background:#160a0e;color:#e9c3ca;border:1px solid var(--stroke2);box-shadow:none}
+  button.b.ghost:hover{background:#1f0e13}
+  button.b.gold{background:linear-gradient(20deg,var(--gold),#e68c14);color:#281800;box-shadow:0 4px 14px rgba(255,180,70,.3)}
+  .hint{font-size:11px;color:var(--muted);margin:10px 0 0;line-height:1.5}
+  .full{width:100%;margin-top:4px}
+  .keyscard{grid-column:1/-1}
+  .khead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+  .khead .live{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);cursor:pointer}
+  .klist{display:flex;flex-direction:column;gap:8px;max-height:430px;overflow:auto;padding-right:4px}
+  .krow{display:flex;align-items:center;gap:12px;background:#0d070a;border:1px solid var(--stroke);
+    border-radius:11px;padding:11px 13px}
+  .krow .pulse{width:9px;height:9px;border-radius:50%;background:var(--good);flex:none;box-shadow:0 0 9px var(--good);
+    animation:pz 1.8s ease-in-out infinite}
+  @keyframes pz{50%{opacity:.4}}
+  .krow .km{font-family:ui-monospace,"SF Mono",monospace;font-size:13.5px;color:#ffd6db;font-weight:600;
+    letter-spacing:.02em;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+  .badge{font-size:10px;font-weight:800;padding:4px 8px;border-radius:999px;letter-spacing:.05em;flex:none}
+  .badge.user{background:rgba(91,140,255,.16);color:#9cc0ff} .badge.life{background:rgba(255,196,70,.16);color:var(--gold)}
+  .badge.admin{background:rgba(139,92,246,.18);color:#c3a7ff} .badge.custom{background:rgba(255,59,78,.16);color:var(--red2)}
+  .left{font-size:11px;color:var(--muted);flex:none;font-variant-numeric:tabular-nums}
+  .empty{text-align:center;color:var(--muted);font-size:13px;padding:26px 0}
+  .out{background:#0d070a;border:1px solid var(--stroke);border-radius:11px;padding:13px 14px;margin-top:12px;
+    font-family:ui-monospace,monospace;font-size:12.5px;color:#d9c3c8;white-space:pre-wrap;word-break:break-word;
+    max-height:220px;overflow:auto;display:none}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);opacity:0;
+    background:#1d0e13;border:1px solid var(--stroke2);border-radius:11px;padding:11px 18px;font-size:13px;font-weight:600;
+    box-shadow:0 10px 30px rgba(0,0,0,.5);transition:.25s;pointer-events:none;z-index:50}
+  .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast.err{color:var(--red2)} .toast.ok{color:var(--good)}
+</style></head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand">
+      <div class="logo">👑</div>
+      <div><h1>ObsessionHub Admin</h1><div class="tag">Key management dashboard</div></div>
     </div>
-    <div class="row">
-      <input id="devices" type="number" min="1" max="100" inputmode="numeric" placeholder="Devices" value="1">
-      <input id="label" placeholder="Name (e.g. PREMIUM)" autocomplete="off" maxlength="24">
+    <div class="secret">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+      <input id="secret" type="password" placeholder="Admin secret" autocomplete="current-password">
     </div>
-    <label class="check"><input id="lifetime" type="checkbox">Lifetime key (never expires)</label>
-    <div class="grid">
-      <button data-a="create-key" class="violet">Create Key</button>
-      <button id="copyKeys" class="ghost" style="display:none">Copy Keys</button>
+  </div>
+
+  <div class="stats">
+    <div class="stat v"><div class="n" id="s-total">—</div><div class="l">Total generated</div></div>
+    <div class="stat g"><div class="n" id="s-active">—</div><div class="l">Active keys</div></div>
+    <div class="stat r"><div class="n" id="s-upd">—</div><div class="l">Last refresh</div></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h2><span class="bar"></span>Create Keys</h2>
+      <div class="row r4">
+        <div><label class="f">Days</label><input id="days" class="t" type="number" min="0" inputmode="numeric" placeholder="0"></div>
+        <div><label class="f">Hours</label><input id="hours" class="t" type="number" min="0" inputmode="numeric" placeholder="0"></div>
+        <div><label class="f">Mins</label><input id="minutes" class="t" type="number" min="0" inputmode="numeric" placeholder="0"></div>
+        <div><label class="f">Amount</label><input id="amount" class="t" type="number" min="1" max="50" inputmode="numeric" value="1"></div>
+      </div>
+      <div class="row r3">
+        <div><label class="f">Max devices</label><input id="devices" class="t" type="number" min="1" max="100" inputmode="numeric" value="1"></div>
+        <div><label class="f">Name / label</label><input id="label" class="t" placeholder="e.g. PREMIUM" autocomplete="off" maxlength="24"></div>
+        <div><label class="f">Key prefix</label><input id="prefix" class="t" placeholder="OBSESSION" autocomplete="off" maxlength="12" value="OBSESSION" style="text-transform:uppercase"></div>
+      </div>
+      <p class="hint" style="margin:-4px 0 10px">Prefix sets the start of the key — e.g. <b style="color:#ff3b4e">PREMIUM</b>-XXXX-XXXX-XXXX. Letters only.</p>
+      <label class="chk"><input id="lifetime" type="checkbox">Lifetime key (never expires)</label>
+      <div class="btns">
+        <button class="b v" data-a="create-key">Create Key</button>
+        <button class="b ghost" id="copyKeys" style="display:none;flex:0 0 auto">Copy Keys</button>
+      </div>
     </div>
 
-    <h3>Manage</h3>
-    <input id="key" placeholder="Key (OBSESSION-...)" autocomplete="off" spellcheck="false">
-    <input id="hwid" placeholder="HWID" autocomplete="off" spellcheck="false">
-    <input id="reason" placeholder="Blacklist reason (optional)" autocomplete="off">
-    <div class="grid">
-      <button data-a="key-info" class="ghost">Key Info</button>
-      <button data-a="reset-hwid" class="ghost">Reset HWID</button>
-      <button data-a="revoke-key">Revoke Key</button>
-      <button data-a="blacklist">Blacklist</button>
-      <button data-a="unblacklist" class="ghost">Unblacklist</button>
-      <button data-a="blacklist-list" class="ghost">View Blacklist</button>
-      <button data-a="clear-bans">Clear Bans</button>
+    <div class="card">
+      <h2><span class="bar"></span>Manage</h2>
+      <div class="row">
+        <div><label class="f">Key</label><input id="key" class="t" placeholder="OBSESSION-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false"></div>
+      </div>
+      <div class="row r2">
+        <div><label class="f">HWID</label><input id="hwid" class="t" placeholder="device hwid" autocomplete="off" spellcheck="false"></div>
+        <div><label class="f">Reason</label><input id="reason" class="t" placeholder="blacklist reason" autocomplete="off"></div>
+      </div>
+      <div class="btns">
+        <button class="b ghost" data-a="key-info">Key Info</button>
+        <button class="b ghost" data-a="reset-hwid">Reset HWID</button>
+        <button class="b" data-a="revoke-key">Revoke</button>
+      </div>
+      <div class="btns" style="margin-top:8px">
+        <button class="b" data-a="blacklist">Blacklist</button>
+        <button class="b ghost" data-a="unblacklist">Unblacklist</button>
+        <button class="b ghost" data-a="blacklist-list">View List</button>
+        <button class="b gold" data-a="clear-bans">Clear Bans</button>
+      </div>
+      <p class="hint">Blacklist uses the HWID field, or the key's bound HWID if HWID is empty.</p>
+      <div class="out" id="out"></div>
     </div>
-    <p class="muted" style="font-size:.8rem;margin:10px 0 0">Blacklist uses the HWID field, or the key's bound HWID if HWID is empty.</p>
 
-    <h3>Generated Keys</h3>
-    <div class="grid">
-      <button data-a="recent" class="ghost">Show Generated Keys</button>
-      <label class="check" style="margin:0;justify-content:center"><input id="autorefresh" type="checkbox">Auto-refresh (5s)</label>
+    <div class="card keyscard">
+      <div class="khead">
+        <h2 style="margin:0"><span class="bar"></span>Active Keys</h2>
+        <button class="b ghost" style="flex:0 0 auto;padding:8px 12px" data-a="recent">Refresh</button>
+        <label class="live"><input id="autorefresh" type="checkbox" style="accent-color:var(--red2)">Auto-refresh (5s)</label>
+      </div>
+      <div class="klist" id="klist"><div class="empty">Click Refresh to load active keys.</div></div>
     </div>
-    <pre id="out">Ready.</pre>
-    <script>
-      (function(){
-        var v = function(id){ return document.getElementById(id).value.trim(); };
-        var life = document.getElementById("lifetime");
-        var copyBtn = document.getElementById("copyKeys");
-        var out = document.getElementById("out");
-        var lastKeys = [];
+  </div>
+</div>
+<div class="toast" id="toast"></div>
 
-        life.onchange = function(){
-          document.getElementById("days").disabled = life.checked;
-          document.getElementById("hours").disabled = life.checked;
-          document.getElementById("minutes").disabled = life.checked;
-        };
+<script>
+  (function(){
+    var v = function(id){ return document.getElementById(id).value.trim(); };
+    var life = document.getElementById("lifetime");
+    var copyBtn = document.getElementById("copyKeys");
+    var out = document.getElementById("out");
+    var klist = document.getElementById("klist");
+    var auto = document.getElementById("autorefresh");
+    var toastEl = document.getElementById("toast");
+    var lastKeys = [], timer = null;
 
-        document.querySelectorAll("button[data-a]").forEach(function(btn){
-          btn.onclick = async function(){
-            out.textContent = "Working...";
-            try {
-              var r = await fetch("/admin/api/" + btn.dataset.a, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", "x-admin-secret": v("secret") },
-                body: JSON.stringify({
-                  key: v("key"), hwid: v("hwid"), reason: v("reason"),
-                  days: v("days"), hours: v("hours"), minutes: v("minutes"), amount: v("amount"), lifetime: life.checked,
-                  devices: v("devices"), label: v("label")
-                })
-              });
-              var d = await r.json();
-              if (btn.dataset.a === "create-key" && d.success) {
-                lastKeys = d.keys;
-                var head = "Name: " + (d.label || (life.checked ? "Lifetime" : "Premium")) +
-                  "  ·  Duration: " + d.duration + "  ·  Devices: " + d.devices;
-                out.textContent = head + "\\n\\n" + d.keys.join("\\n");
-                copyBtn.style.display = "inline-block"; copyBtn.textContent = "Copy Keys";
-              } else if (btn.dataset.a === "recent" && d.items) {
-                renderRecent(d);
-              } else {
-                out.textContent = JSON.stringify(d, null, 2);
-              }
-            } catch (e) { out.textContent = "Network error."; }
-          };
-        });
+    function toast(msg, kind){
+      toastEl.textContent = msg; toastEl.className = "toast on " + (kind||"");
+      clearTimeout(toastEl._t); toastEl._t = setTimeout(function(){ toastEl.className = "toast " + (kind||""); }, 2200);
+    }
+    function showOut(obj){ out.style.display = "block"; out.textContent = typeof obj === "string" ? obj : JSON.stringify(obj, null, 2); }
 
-        function fmtLeft(t){
-          if (t === -1) return "lifetime";
-          if (t < 0) return "";
-          var h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60);
-          return h >= 24 ? (Math.floor(h / 24) + "d " + (h % 24) + "h left") : (h + "h " + m + "m left");
-        }
-        function renderRecent(d){
-          var stamp = new Date().toLocaleTimeString();
-          if (!d.items.length) { out.textContent = "No keys generated yet.\\n\\nLast checked: " + stamp; return; }
-          var active = 0;
-          var lines = d.items.map(function(it){
-            if (it.active) active++;
-            var tag = (it.label && it.type === "custom") ? it.label.toUpperCase()
-                    : it.type === "lifetime" ? "LIFETIME" : it.type === "admin" ? "ADMIN" : "USER";
-            var state = it.active ? ("ACTIVE" + (fmtLeft(it.ttl) ? " (" + fmtLeft(it.ttl) + ")" : "")) : "EXPIRED";
-            return (it.active ? "● " : "○ ") + it.key + "  ·  " + tag + "  ·  " + state;
-          });
-          out.textContent = "TOTAL: " + d.total + "   ACTIVE: " + active + " / " + d.shown +
-            "\\nLast updated: " + stamp + (auto.checked ? "  · live" : "") + "\\n\\n" + lines.join("\\n");
-        }
+    life.onchange = function(){
+      ["days","hours","minutes"].forEach(function(id){ document.getElementById(id).disabled = life.checked; });
+    };
 
-        async function pollRecent(){
-          try {
-            var r = await fetch("/admin/api/recent", {
-              method: "POST",
-              headers: { "Content-Type": "application/json", "x-admin-secret": v("secret") }, body: "{}"
-            });
-            var d = await r.json();
-            if (d.items) renderRecent(d); else { out.textContent = JSON.stringify(d, null, 2); auto.checked = false; }
-          } catch (e) { out.textContent = "Network error."; }
-        }
+    function body(){
+      return JSON.stringify({
+        key: v("key"), hwid: v("hwid"), reason: v("reason"),
+        days: v("days"), hours: v("hours"), minutes: v("minutes"), amount: v("amount"), lifetime: life.checked,
+        devices: v("devices"), label: v("label"), prefix: v("prefix")
+      });
+    }
+    async function call(action, b){
+      return fetch("/admin/api/" + action, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-admin-secret": v("secret") },
+        body: b || "{}"
+      }).then(function(r){ return r.json(); });
+    }
 
-        var auto = document.getElementById("autorefresh"), timer = null;
-        auto.onchange = function(){
-          if (auto.checked) { pollRecent(); timer = setInterval(pollRecent, 5000); }
-          else if (timer) { clearInterval(timer); timer = null; }
-        };
+    document.querySelectorAll("button[data-a]").forEach(function(btn){
+      btn.onclick = async function(){
+        var a = btn.dataset.a;
+        if (!v("secret")) { toast("Enter the admin secret first", "err"); return; }
+        try {
+          var d = await call(a, a === "recent" ? "{}" : body());
+          if (a === "create-key") {
+            if (d.success){
+              lastKeys = d.keys;
+              copyBtn.style.display = "inline-block"; copyBtn.textContent = "Copy Keys";
+              showOut("✓ " + d.keys.length + " key(s) · " + (d.label || (life.checked?"Lifetime":"Premium")) +
+                " · " + d.duration + " · " + d.devices + " device(s)\\n\\n" + d.keys.join("\\n"));
+              toast("Created " + d.keys.length + " key(s)", "ok");
+              loadKeys();
+            } else { showOut(d.error || d); toast(d.error || "Failed", "err"); }
+          } else if (a === "recent") {
+            renderKeys(d);
+          } else {
+            showOut(d);
+            if (d.success) toast("Done", "ok");
+            else if (d.error) toast(d.error, "err");
+          }
+        } catch (e) { toast("Network error", "err"); }
+      };
+    });
 
-        copyBtn.onclick = async function(){
-          try { await navigator.clipboard.writeText(lastKeys.join("\\n")); copyBtn.textContent = "Copied!"; }
-          catch (e) { copyBtn.textContent = "Select & copy manually"; }
-        };
-      })();
-    </script>`, "crown"));
+    function fmtLeft(t){
+      if (t === -1) return "lifetime";
+      if (t < 0) return "";
+      var h = Math.floor(t/3600), m = Math.floor(t%3600/60);
+      if (h >= 24) return Math.floor(h/24) + "d " + (h%24) + "h left";
+      if (h >= 1) return h + "h " + m + "m left";
+      return m + "m left";
+    }
+    function badgeFor(it){
+      if (it.label && it.type === "custom") return ["custom", it.label.toUpperCase()];
+      if (it.type === "lifetime") return ["life","LIFETIME"];
+      if (it.type === "admin") return ["admin","ADMIN"];
+      return ["user","USER"];
+    }
+    function renderKeys(d){
+      var stamp = new Date().toLocaleTimeString();
+      document.getElementById("s-upd").textContent = stamp.replace(/:\\d+ /," ");
+      if (d.error){ klist.innerHTML = '<div class="empty">' + (d.error||"Error") + '</div>'; toast(d.error, "err"); auto.checked = false; stopTimer(); return; }
+      document.getElementById("s-total").textContent = d.total != null ? d.total : "—";
+      document.getElementById("s-active").textContent = d.active != null ? d.active : (d.items?d.items.length:"—");
+      if (!d.items || !d.items.length){ klist.innerHTML = '<div class="empty">No active keys right now.</div>'; return; }
+      klist.innerHTML = d.items.map(function(it){
+        var bg = badgeFor(it), left = fmtLeft(it.ttl);
+        return '<div class="krow"><span class="pulse"></span>'
+          + '<span class="km" title="Click to copy" data-k="' + it.key + '">' + it.key + '</span>'
+          + '<span class="badge ' + bg[0] + '">' + bg[1] + '</span>'
+          + (left ? '<span class="left">' + left + '</span>' : '')
+          + '</div>';
+      }).join("");
+      klist.querySelectorAll(".km").forEach(function(el){
+        el.onclick = function(){ navigator.clipboard.writeText(el.dataset.k).then(function(){ toast("Key copied", "ok"); }); };
+      });
+    }
+    async function loadKeys(){ try { renderKeys(await call("recent","{}")); } catch(e){} }
+
+    function stopTimer(){ if (timer){ clearInterval(timer); timer = null; } }
+    auto.onchange = function(){
+      if (auto.checked){ if(!v("secret")){ toast("Enter the admin secret first","err"); auto.checked=false; return; } loadKeys(); timer = setInterval(loadKeys, 5000); }
+      else stopTimer();
+    };
+
+    copyBtn.onclick = function(){
+      navigator.clipboard.writeText(lastKeys.join("\\n")).then(function(){ copyBtn.textContent = "Copied!"; toast("Keys copied","ok"); })
+        .catch(function(){ copyBtn.textContent = "Copy failed"; });
+    };
+  })();
+</script>
+</body></html>`);
 });
 
 app.use((req, res) => {
