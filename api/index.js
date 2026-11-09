@@ -30,7 +30,7 @@ const SITE_NAME = "ObsessionHub";
 // A tier only appears when EVERY one of its links is filled in (half-finished tiers stay hidden).
 const TIERS = [
   // id         provider name   key lasts        checkpoint links (fill ALL to enable this option)
-  { id: "lv-3h",  provider: "Linkvertise", hours: 3,  links: ["", ""] },
+  { id: "lv-3h",  provider: "Linkvertise", hours: 3,  links: [""https://direct-link.net/10011031/B72fEGbf5kYG""] },
   { id: "wi-6h",  provider: "work.ink",    hours: 6,  links: ["https://work.ink/2omP/checkpoint-1"] },
   { id: "wi-12h", provider: "work.ink",    hours: 12, links: ["https://work.ink/2omP/checkpoint-1", "https://work.ink/2omP/checkpoint--2"] },
   { id: "wi-1d",  provider: "work.ink",    hours: 24, links: ["https://work.ink/2omP/checkpoint-1", "https://work.ink/2omP/checkpoint--2", ""] },
@@ -54,7 +54,7 @@ const BIND_IP = false;
 const MAX_STRIKES = 3;
 const BAN_SECONDS = 5 * 60 * 60;
 
-const REDSQUARE_API_KEY = process.env.REDSQUARE_API_KEY || "";
+const REDSQUARE_API_KEY = process.env.REDSQUARE_API_KEY || "kys_sk_OW66zjK...";
 const REDSQUARE_ENABLED = !!REDSQUARE_API_KEY;
 const REDSQUARE_HOST = process.env.REDSQUARE_HOST || "kys.linkvertise.lol";
 const REDSQUARE_TIMEOUT_MS = 4000;
