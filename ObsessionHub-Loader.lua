@@ -64,7 +64,7 @@ local Config = {
         { name = "AH",   file = "AH.lua",   requiresKey = true,  placeIds = { 10148749921, 78515283254292 } },
         { name = "BFE",  file = "BFE.lua",  requiresKey = true,  placeIds = { 74023858073178, 10766620257 } },
         { name = "IV",   file = "IV.lua",   requiresKey = true,  placeIds = { 8356562067 } },
-        { name = "RSM",   file = "RSM.lua",   requiresKey = true,  placeIds = { 115068315659966, 10765938934 } },
+        { name = "RASM",   file = "RÀSM.lua",   requiresKey = true,  placeIds = { 115068315659966, 10765938934 } },
         { name = "TFFA", file = "TFFA.lua", requiresKey = false, placeIds = { 120219252362013 } }
     },
 
