@@ -92,6 +92,7 @@ const GAMES = [
   "Ride A Pet",
   "Strafe FPS",
   "Tap Simulator",
+  "Roll A StickMan",
   "Gun Forge",
   "Throw Food For Animals",
   "Vagrant Survival",
