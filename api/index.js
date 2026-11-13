@@ -2631,6 +2631,42 @@ app.post("/admin/api/recent", wrap(async (req, res) => {
     if (!it || typeof it !== "object" || !it.key || seen.has(it.key)) continue;
     seen.set(it.key, it);
   }
+  // Keys that exist in Redis but fell out of the history lists (older than the cap, or made before the lists existed)
+  // are discovered by scanning key:* so no live key can be missing from the panel.
+  try {
+    const missing = new Set();
+    let cur = "0", loops = 0;
+    do {
+      const out = await redis.scan(cur, { match: "key:*", count: 500 });
+      cur = Array.isArray(out) ? String(out[0]) : "0";
+      for (const n of (Array.isArray(out) && out[1]) || []) {
+        const k = String(n).slice(4);
+        if (k && !seen.has(k)) missing.add(k);
+      }
+    } while (cur !== "0" && ++loops < 400);
+
+    const names = [...missing];
+    const backfillAdmin = [], backfillAll = [];
+    for (let i = 0; i < names.length; i += 250) {
+      const chunk = names.slice(i, i + 250);
+      const pipe = redis.pipeline();
+      chunk.forEach(k => { pipe.hgetall("key:" + k); pipe.ttl("key:" + k); });
+      const r = await pipe.exec();
+      chunk.forEach((k, j) => {
+        const d = r[j * 2];
+        if (!d || typeof d !== "object" || !Object.keys(d).length) return;
+        const it = { key: k, at: Number(d.created) || 0, type: d.type || "", label: d.label || "", maxdev: Number(d.maxdev) || 1 };
+        seen.set(k, it);
+        const entry = JSON.stringify(it);
+        backfillAll.push(entry);
+        if (it.type && it.type !== "free") backfillAdmin.push(entry);
+      });
+    }
+    // remember them so they still show after they expire
+    if (backfillAdmin.length) { await redis.rpush("recent:admin", ...backfillAdmin); await redis.ltrim("recent:admin", 0, 4999); }
+    if (backfillAll.length) { await redis.rpush("recent:keys", ...backfillAll); await redis.ltrim("recent:keys", 0, 1999); }
+  } catch (e) { console.error("admin key scan failed", e); }
+
   const items = [...seen.values()].sort((a, b) => (Number(b.at) || 0) - (Number(a.at) || 0));
 
   // live status for every key: ttl -2 = gone (expired/revoked), -1 = lifetime, >0 = seconds left
@@ -2736,7 +2772,8 @@ app.get("/admin", (req, res) => {
   .pill{font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;border:1px solid var(--line2);color:var(--muted);font-variant-numeric:tabular-nums}
   .pill.ok{color:var(--ok);background:var(--okbg);border-color:transparent}
   .pill.bad{color:var(--bad);background:var(--badbg);border-color:transparent}
-  .tbl{border-top:1px solid var(--line);max-height:380px;overflow:auto}
+  .pill.life{color:var(--warn);background:var(--warnbg);border-color:transparent}
+  .tbl{border-top:1px solid var(--line);max-height:520px;overflow:auto}
   table{width:100%;border-collapse:collapse}
   thead th{position:sticky;top:0;background:var(--panel2);text-align:left;font-size:12px;color:var(--muted);font-weight:600;
     text-transform:uppercase;letter-spacing:.05em;padding:10px 18px;border-bottom:1px solid var(--line);white-space:nowrap}
@@ -2838,7 +2875,14 @@ app.get("/admin", (req, res) => {
     <div class="seg" id="seg">
       <button data-s="all" class="on">All</button>
       <button data-s="active">Active</button>
+      <button data-s="lifetime">Lifetime</button>
       <button data-s="expired">Expired</button>
+    </div>
+    <div class="seg" id="tseg">
+      <button data-t="all" class="on">All types</button>
+      <button data-t="booster">Booster</button>
+      <button data-t="premium">Premium</button>
+      <button data-t="staff">Staff</button>
     </div>
     <button class="b ghost sm" data-a="recent">Refresh</button>
     <label class="live"><input id="autorefresh" type="checkbox">Auto-refresh (10s)</label>
@@ -2858,7 +2902,7 @@ app.get("/admin", (req, res) => {
     var auto = document.getElementById("autorefresh");
     var toastEl = document.getElementById("toast");
     var searchEl = document.getElementById("search");
-    var lastKeys = [], timer = null, data = null, statusFilter = "all";
+    var lastKeys = [], timer = null, data = null, statusFilter = "all", typeFilter = "all";
     var openState = { paid:true, free:false };
     var CATS = [
       { id:"paid", name:"Generated keys", sub:"Booster, premium, staff and custom keys" },
@@ -2958,15 +3002,19 @@ app.get("/admin", (req, res) => {
       sections.innerHTML = "";
       CATS.forEach(function(c){
         var all = data.items.filter(function(it){ return (it.category === "free") === (c.id === "free"); });
-        var cnt = { total: all.length, active: 0, expired: 0 };
-        all.forEach(function(it){ if (it.active) cnt.active++; else cnt.expired++; });
+        var cnt = { total: all.length, active: 0, expired: 0, lifetime: 0 };
+        all.forEach(function(it){ if (it.active) cnt.active++; else cnt.expired++; if (it.active && it.ttl === -1) cnt.lifetime++; });
         var showType = c.id !== "free";
         var rows = all.filter(function(it){
           if (statusFilter === "active" && !it.active) return false;
           if (statusFilter === "expired" && it.active) return false;
+          if (statusFilter === "lifetime" && !(it.active && it.ttl === -1)) return false;
+          if (showType && typeFilter !== "all" && it.category !== typeFilter) return false;
           if (q && it.key.indexOf(q) === -1) return false;
           return true;
         });
+        var rank = function(it){ return it.active ? (it.ttl === -1 ? 0 : 1) : 2; };
+        rows.sort(function(a, b){ return rank(a) - rank(b) || (b.at || 0) - (a.at || 0); });
 
         var det = el("details","sec"); if (openState[c.id]) det.open = true;
         det.addEventListener("toggle", function(){ openState[c.id] = det.open; });
@@ -2975,6 +3023,7 @@ app.get("/admin", (req, res) => {
         sum.appendChild(el("span","st", c.name));
         sum.appendChild(el("span","sub", c.sub));
         var pills = el("span","cnt");
+        if (cnt.lifetime) pills.appendChild(el("span","pill life", cnt.lifetime + " lifetime"));
         pills.appendChild(el("span","pill ok", cnt.active + " active"));
         pills.appendChild(el("span","pill bad", cnt.expired + " expired"));
         pills.appendChild(el("span","pill", cnt.total + " total"));
@@ -3022,6 +3071,15 @@ app.get("/admin", (req, res) => {
           navigator.clipboard.writeText(ks.join(NL)).then(function(){ toast(ks.length + " key(s) copied","ok"); });
         };
         foot.appendChild(cp); foot.appendChild(cpa);
+        if (showType) {
+          var cpl = el("button","b ghost sm","Copy lifetime keys");
+          cpl.onclick = function(){
+            var ks = all.filter(function(it){ return it.active && it.ttl === -1; }).map(function(it){ return it.key; });
+            if (!ks.length){ toast("No lifetime keys here","err"); return; }
+            navigator.clipboard.writeText(ks.join(NL)).then(function(){ toast(ks.length + " key(s) copied","ok"); });
+          };
+          foot.appendChild(cpl);
+        }
         det.appendChild(foot);
         sections.appendChild(det);
       });
@@ -3031,6 +3089,12 @@ app.get("/admin", (req, res) => {
       var b = e.target.closest("button[data-s]"); if (!b) return;
       statusFilter = b.dataset.s;
       document.querySelectorAll("#seg button").forEach(function(x){ x.classList.toggle("on", x === b); });
+      render();
+    };
+    document.getElementById("tseg").onclick = function(e){
+      var b = e.target.closest("button[data-t]"); if (!b) return;
+      typeFilter = b.dataset.t;
+      document.querySelectorAll("#tseg button").forEach(function(x){ x.classList.toggle("on", x === b); });
       render();
     };
     searchEl.oninput = render;
