@@ -27,7 +27,7 @@ local Config = {
     ScriptBase = "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/src/",
     Discord   = "https://discord.gg/D8SM7VfTKZ",      -- "" to hide the button
     Youtube   = "https://www.youtube.com/@jirombv",    -- "" to hide the button
-    Premium   = "https://dsc.gg/blackcloverhub",      -- Buy Premium link ("" to hide)
+    Premium   = "https://discord.gg/blackcloverhub",      -- Buy Premium link ("" to hide)
 
     RememberKey = true,   -- save the key on this device so users don't retype it
     CloseAfterLoad = true, -- close the window after a script loads
@@ -1904,7 +1904,7 @@ o120197.Interactable = true
 o120197.AutomaticSize = Enum.AutomaticSize.None
 o120197.ZIndex = 1
 o120197.LayoutOrder = 0
-o120197.Text = "dsc.gg/blackcloverhub"
+o120197.Text = "discord.gg/blackcloverhub"
 o120197.TextSize = 11
 o120197.TextScaled = false
 o120197.TextWrapped = false
