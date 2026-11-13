@@ -77,7 +77,9 @@ const KEY_HOURS = Math.round(KEY_TTL_SECONDS / 3600);
 const _utHours = usableTiers().map(t => t.hours);
 const KEY_MAX_DUR = _utHours.length ? durLabel(Math.max.apply(null, _utHours)) : `${KEY_HOURS} Hours`;
 const KEY_MIN_DUR = _utHours.length ? durLabel(Math.min.apply(null, _utHours)) : `${KEY_HOURS} Hours`;
-const RESET_COOLDOWN_SECONDS = 12 * 60 * 60;
+const RESET_COOLDOWN_SECONDS = 12 * 60 * 60;       // free keys: 1 reset per 12h
+const PREMIUM_RESETS_MAX = 10;                      // premium keys: up to 10 resets...
+const PREMIUM_RESET_WINDOW_SECONDS = 24 * 60 * 60; // ...per 24h window
 const MAX_KEYS_PER_IP_PER_DAY = 5;
 
 const ALLOWED_REFERRERS = ["lootlabs.gg", "work.ink", "linkvertise.com", "linkvertise.net", "link-to.net", "link-hub.net", "direct-link.net", "link-target.net", "publisher.linkvertise.com"];
@@ -87,7 +89,7 @@ const TAGLINE = `Get your key, pick your script, and start playing. Keys last up
 const LOGO_URL = "";
 
 const GAMES_BANNER = "";
-const DISCORD_URL = "https://discord.gg/G6gsENX87";
+const DISCORD_URL = "https://discord.gg/blackcloverhub";
 const YOUTUBE_URL = "https://www.youtube.com/@jirombv";
 
 const GAMES = [
@@ -127,7 +129,7 @@ const EXECUTORS = [
 const FAQ = [
   ["How long does a key last?", `It depends on the option you pick — from ${KEY_MIN_DUR} up to ${KEY_MAX_DUR}. More checkpoints means a longer key.`],
   ["Why does my key say wrong device?", "Keys lock to the first device that uses them. Open the Key Checker and tap Reset HWID."],
-  ["How often can I reset my HWID?", "Once every 12 hours per key."],
+  ["How often can I reset my HWID?", "Free keys can reset once every 12 hours. Premium keys can reset up to 10 times per day."],
   ["Why did I get Bypass Detected?", "Ad bypassers and skipping checkpoints aren't allowed. Start over and complete each checkpoint normally."],
 ];
 
@@ -227,8 +229,8 @@ return 2`;
 
 const CSS = String.raw`
 @property --ang{syntax:"<angle>";initial-value:0deg;inherits:false}
-:root{--bg:#000000;--card:rgba(10,10,12,.74);--line:rgba(255,255,255,.18);--red:#cfd1d8;--red2:#f5f5f7;
-  --deep:#2c2c32;--violet:#d6d8de;--text:#f2f2f4;--muted:#9a9ca4}
+:root{--bg:#000000;--card:rgba(10,10,12,.74);--line:rgba(255,255,255,.18);--red:#3d3d45;--red2:#f5f5f7;
+  --deep:#131316;--violet:#d6d8de;--text:#f2f2f4;--muted:#9a9ca4}
 *{box-sizing:border-box}
 body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:28px 16px;
   background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,sans-serif;overflow-x:hidden}
@@ -384,6 +386,41 @@ a{color:#eceef2}
 .sec-head h2{background:linear-gradient(90deg,#8d8f98,#fff,#8d8f98);background-size:200% auto;-webkit-background-clip:text;background-clip:text;
   color:transparent;animation:titleShine 5s linear infinite}
 ::selection{background:#fff;color:#000}
+/* ---- readability fixes: keep bright style to primary buttons only ---- */
+button.grow{background:linear-gradient(90deg,rgba(34,34,40,.92),rgba(10,10,12,.85))!important;color:#fff!important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.22)!important}
+button.grow::after,.seg::after,.menu-btn::after,.side-btn::after,.side-x::after,.hold::after,.go.wait::after{display:none}
+button.grow:hover{box-shadow:inset 0 0 0 1px rgba(255,255,255,.6),0 0 22px rgba(255,255,255,.2)!important;filter:none}
+.grow .nm.code{color:#f2f2f4!important}
+.grow .copybadge{background:linear-gradient(180deg,#fff,#a9acb6)!important;color:#08080a!important;box-shadow:0 0 16px rgba(255,255,255,.35)!important}
+.grow .soonbadge{color:#c9ccd3!important}
+.glist{background:rgba(6,6,8,.82)!important}
+.grow{background:linear-gradient(90deg,rgba(34,34,40,.85),rgba(10,10,12,.6))!important}
+.seg{background:transparent!important;color:#b9bcc4!important;box-shadow:none!important}
+.seg.on,nav .links a.nav-cta{background:linear-gradient(180deg,#fff,#a9acb6)!important;color:#08080a!important;
+  box-shadow:0 0 18px rgba(255,255,255,.3)!important}
+.menu-btn,.side-btn,.side-x,.hold{background:rgba(255,255,255,.07)!important;color:#fff!important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.2)!important}
+.go.wait{background:rgba(255,255,255,.06)!important;color:#c9ccd3!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)!important}
+.cp.done .cpi,.prog .d.done{background:linear-gradient(180deg,#fff,#a9acb6)!important;color:#08080a!important}
+.side-tip{background:linear-gradient(135deg,rgba(255,255,255,.1),rgba(255,255,255,.02))!important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.2)!important;color:#e8e9ed}
+.marquee b{color:#fff}
+/* ---- music toggle ---- */
+#musicbtn{position:fixed!important;right:18px;bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:60;width:46px;height:46px;
+  margin:0!important;padding:0!important;border-radius:50%!important;display:grid;place-items:center;color:#fff!important;cursor:pointer;
+  background:rgba(0,0,0,.72)!important;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.3),0 8px 24px rgba(0,0,0,.7)!important;transition:box-shadow .25s,transform .15s}
+#musicbtn::after{display:none!important}
+#musicbtn:hover{transform:translateY(-2px);box-shadow:inset 0 0 0 1px #fff,0 0 26px rgba(255,255,255,.45)!important}
+#musicbtn svg{width:21px;height:21px}
+#musicbtn .eq{position:absolute;inset:0;display:none;align-items:flex-end;justify-content:center;gap:2px;padding-bottom:7px}
+#musicbtn .eq i{width:2px;height:3px;background:#fff;border-radius:1px;animation:eqb 1s ease-in-out infinite}
+#musicbtn .eq i:nth-child(2){animation-delay:.2s}#musicbtn .eq i:nth-child(3){animation-delay:.4s}#musicbtn .eq i:nth-child(4){animation-delay:.6s}
+@keyframes eqb{50%{height:8px}}
+#musicbtn .slash{position:absolute;width:26px;height:2px;background:#fff;border-radius:2px;transform:rotate(-45deg);box-shadow:0 0 0 1.5px rgba(0,0,0,.8)}
+#musicbtn.on{box-shadow:inset 0 0 0 1px #fff,0 0 26px rgba(255,255,255,.4)!important}
+#musicbtn.on .eq{display:flex}#musicbtn.on .slash{display:none}#musicbtn.on svg{transform:translateY(-4px) scale(.85)}
 `;
 
 const SHARED_JS = String.raw`
@@ -402,7 +439,7 @@ const SHARED_JS = String.raw`
       g.addColorStop(0, "#fff"); g.addColorStop(.18, color); g.addColorStop(1, "rgba(0,0,0,0)");
       var cx = s.getContext("2d"); cx.fillStyle = g; cx.fillRect(0, 0, n, n); return s;
     };
-    var red = sprite("rgba(255,255,255,.9)"), violet = sprite("rgba(167,139,250,.9)");
+    var red = sprite("rgba(255,255,255,.9)"), violet = sprite("rgba(160,160,160,.9)");
     var rs = function(){ W = c.width = innerWidth * dpr; H = c.height = innerHeight * dpr;
       c.style.width = innerWidth + "px"; c.style.height = innerHeight + "px"; };
     rs(); addEventListener("resize", rs);
@@ -463,6 +500,62 @@ const SHARED_JS = String.raw`
       if (alive) requestAnimationFrame(f); else c.remove();
     })();
   };
+})();
+
+// ---- Music toggle: YouTube audio, on/off only ----
+(function(){
+  if (window.__bcMusic) return; window.__bcMusic = 1;
+  var VID = "XMeQeIG_rQg", K = "bc_music", KT = "bc_music_t";
+  var want = false, ready = false, player = null;
+  var btn = document.createElement("button");
+  btn.type = "button"; btn.id = "musicbtn"; btn.title = "Music on/off";
+  btn.setAttribute("aria-label", "Toggle music"); btn.setAttribute("aria-pressed", "false");
+  btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg><span class="eq"><i></i><i></i><i></i><i></i></span><span class="slash"></span>';
+  var holder = document.createElement("div");
+  holder.style.cssText = "position:fixed;left:-9999px;top:0;width:200px;height:200px;overflow:hidden;pointer-events:none";
+  function setUI(on){ btn.classList.toggle("on", on); btn.setAttribute("aria-pressed", on ? "true" : "false"); }
+  function save(){ try { sessionStorage.setItem(K, want ? "1" : "0"); } catch (e) {} }
+  function loadApi(cb){
+    if (window.YT && YT.Player) { cb(); return; }
+    var prev = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = function(){ if (prev) try { prev(); } catch (e) {} cb(); };
+    if (!document.getElementById("yt-api")) {
+      var t = document.createElement("script"); t.id = "yt-api"; t.src = "https://www.youtube.com/iframe_api"; document.head.appendChild(t);
+    }
+  }
+  function make(){
+    if (player) { if (ready && want) player.playVideo(); return; }
+    var d = document.createElement("div"); holder.appendChild(d);
+    var start = 0; try { start = Math.floor(Number(sessionStorage.getItem(KT)) || 0); } catch (e) {}
+    player = new YT.Player(d, {
+      width: "200", height: "200", videoId: VID,
+      playerVars: { autoplay: 0, controls: 0, disablekb: 1, fs: 0, loop: 1, playlist: VID, playsinline: 1, rel: 0, modestbranding: 1, start: start },
+      events: {
+        onReady: function(){ ready = true; try { player.setVolume(60); } catch (e) {} if (want) player.playVideo(); },
+        onAutoplayBlocked: function(){ want = false; setUI(false); save(); },
+        onStateChange: function(e){ if (e.data === 1 && want) setUI(true); }
+      }
+    });
+  }
+  btn.addEventListener("click", function(){
+    want = !want; setUI(want); save();
+    if (want) loadApi(make); else if (player && ready) player.pauseVideo();
+  });
+  addEventListener("pagehide", function(){
+    try { if (player && ready && want) sessionStorage.setItem(KT, String(Math.floor(player.getCurrentTime() || 0))); } catch (e) {}
+  });
+  function mount(){
+    document.body.appendChild(holder); document.body.appendChild(btn);
+    var was = false; try { was = sessionStorage.getItem(K) === "1"; } catch (e) {}
+    if (was) {
+      want = true; setUI(true); loadApi(make);
+      setTimeout(function(){
+        var st = -2; try { st = player && ready ? player.getPlayerState() : -2; } catch (e) {}
+        if (want && st !== 1 && st !== 3) { want = false; setUI(false); save(); }
+      }, 3000);
+    }
+  }
+  if (document.body) mount(); else addEventListener("DOMContentLoaded", mount);
 })();
 `;
 
@@ -569,7 +662,7 @@ footer a{margin:0 8px}
 .ficon svg{width:22px;height:22px}
 
 .band{position:relative;overflow:hidden;padding:30px 24px;border-radius:20px;text-align:center;
-  background:linear-gradient(135deg,rgba(90,90,96,.55),rgba(76,29,149,.35));box-shadow:0 0 0 1px rgba(255,255,255,.3),0 20px 60px rgba(0,0,0,.45)}
+  background:linear-gradient(135deg,rgba(90,90,96,.55),rgba(57,57,57,.35));box-shadow:0 0 0 1px rgba(255,255,255,.3),0 20px 60px rgba(0,0,0,.45)}
 .band::before{content:"";position:absolute;inset:-50%;background:radial-gradient(circle,rgba(255,255,255,.25),transparent 60%);animation:drift 10s ease-in-out infinite alternate}
 .band > *{position:relative}
 .band h2{margin:0 0 6px;font-size:1.6rem}
@@ -667,7 +760,7 @@ footer a{margin:0 8px}
   transform:translateX(-100%);animation:scan 2.4s ease-in-out infinite}
 @keyframes scan{to{transform:translateX(100%)}}
 .cp.lock{opacity:.5}
-.cp.final .cpi{color:#c4b5fd}
+.cp.final .cpi{color:#c2c2c2}
 .cp.final.done .cpi{background:linear-gradient(135deg,#d6d8de,#55565e);color:#fff;box-shadow:0 0 14px rgba(225,227,233,.6)}
 
 .go{display:block;width:100%;margin:0;padding:16px;font-size:1.05rem;letter-spacing:.02em;text-align:center}
@@ -690,7 +783,7 @@ footer a{margin:0 8px}
 .warp small{display:block;margin-top:8px;color:var(--muted)}
 
 .toast{position:fixed;top:18px;left:50%;z-index:40;display:flex;align-items:center;gap:10px;padding:12px 18px;border-radius:999px;
-  font-weight:600;font-size:.9rem;white-space:nowrap;background:rgba(20,6,9,.94);transform:translate(-50%,-160%);
+  font-weight:600;font-size:.9rem;white-space:nowrap;background:rgba(11,11,11,.94);transform:translate(-50%,-160%);
   box-shadow:0 0 0 1px rgba(52,211,153,.45),0 10px 40px rgba(0,0,0,.5),0 0 30px rgba(52,211,153,.2);animation:toast 4.2s cubic-bezier(.2,.8,.2,1) .3s forwards}
 .toast i{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:#10b981;color:#fff;font-style:normal;font-size:.75rem}
 @keyframes toast{12%,82%{transform:translate(-50%,0)}100%{transform:translate(-50%,-160%)}}
@@ -705,7 +798,7 @@ footer a{margin:0 8px}
   text-decoration:none;background:rgba(255,255,255,.05);box-shadow:inset 0 0 0 1px rgba(255,255,255,.1);transition:all .2s}
 .soc svg{width:16px;height:16px}
 .soc:hover{transform:translateY(-2px)}
-.soc.dc:hover{background:rgba(88,101,242,.25);box-shadow:inset 0 0 0 1px rgba(88,101,242,.65),0 0 20px rgba(88,101,242,.3)}
+.soc.dc:hover{background:rgba(113,113,113,.25);box-shadow:inset 0 0 0 1px rgba(113,113,113,.65),0 0 20px rgba(113,113,113,.3)}
 .soc.yt:hover{background:rgba(255,255,255,.18);box-shadow:inset 0 0 0 1px rgba(255,255,255,.6),0 0 20px rgba(255,255,255,.25)}
 @media (prefers-reduced-motion:reduce){.floor{display:none}.go.wait::before{width:100%}}
 .lite .floor{display:none}
@@ -766,9 +859,9 @@ nav .links a.nav-cta{color:#fff;background:linear-gradient(135deg,var(--red),var
 .seg:hover:not(.on){color:var(--text);background:rgba(255,255,255,.08)}
 /* ---- games checklist ---- */
 .glist{max-width:920px;margin:14px auto 0;padding:22px;border-radius:20px;display:grid;grid-template-columns:1fr 1fr;gap:10px 18px;
-  background:rgba(14,6,9,.72);box-shadow:0 0 0 1px rgba(255,255,255,.3),0 24px 64px rgba(0,0,0,.55),inset 0 0 70px rgba(255,255,255,.06)}
+  background:rgba(9,9,9,.72);box-shadow:0 0 0 1px rgba(255,255,255,.3),0 24px 64px rgba(0,0,0,.55),inset 0 0 70px rgba(255,255,255,.06)}
 .grow{display:flex;align-items:center;gap:14px;padding:12px 16px;border-radius:11px;text-decoration:none;
-  background:linear-gradient(90deg,rgba(44,10,18,.75),rgba(18,8,12,.45));box-shadow:inset 0 0 0 1px rgba(255,255,255,.22);transition:transform .15s,box-shadow .2s}
+  background:linear-gradient(90deg,rgba(21,21,21,.75),rgba(11,11,11,.45));box-shadow:inset 0 0 0 1px rgba(255,255,255,.22);transition:transform .15s,box-shadow .2s}
 a.grow:hover{transform:translateX(3px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.6),0 0 20px rgba(255,255,255,.2)}
 .grow .ck{width:26px;height:26px;flex:none;border-radius:7px;display:grid;place-items:center;font-weight:800}
 .grow.ok .ck{color:var(--red2);box-shadow:inset 0 0 0 2px rgba(255,255,255,.5)}
@@ -780,7 +873,7 @@ a.grow:hover{transform:translateX(3px);box-shadow:inset 0 0 0 1px rgba(255,255,2
 .grow .nm.code::-webkit-scrollbar{height:5px}
 .grow .nm.code::-webkit-scrollbar-thumb{background:rgba(255,255,255,.5);border-radius:3px}
 .grow .nm.code{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.5) transparent}
-.grow .soonbadge{margin-left:auto;font-size:.66rem;font-weight:800;letter-spacing:.12em;color:#ff6b7a;padding:6px 13px;border-radius:7px;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.55)}
+.grow .soonbadge{margin-left:auto;font-size:.66rem;font-weight:800;letter-spacing:.12em;color:#999999;padding:6px 13px;border-radius:7px;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.55)}
 button.grow{width:100%;border:0;cursor:pointer;font:inherit;text-align:left}
 .grow .copybadge{margin-left:auto;font-size:.66rem;font-weight:800;letter-spacing:.12em;color:#fff;padding:6px 14px;border-radius:7px;background:linear-gradient(20deg,var(--red2),var(--deep));box-shadow:0 0 14px rgba(255,255,255,.35)}
 .grow.copied .copybadge{background:linear-gradient(20deg,#21c17a,#0f7a4c);box-shadow:0 0 14px rgba(33,193,122,.4)}
@@ -790,12 +883,12 @@ button.grow{width:100%;border:0;cursor:pointer;font:inherit;text-align:left}
 .more:hover{text-decoration:underline}
 .sec-top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .thumb{height:140px;margin:-20px -20px 14px;display:grid;place-items:center;overflow:hidden;color:rgba(255,255,255,.45);
-  background:linear-gradient(135deg,rgba(90,90,96,.65),rgba(76,29,149,.45))}
+  background:linear-gradient(135deg,rgba(90,90,96,.65),rgba(57,57,57,.45))}
 .thumb img{width:100%;height:100%;object-fit:cover;transition:transform .5s}
 .tile:hover .thumb img{transform:scale(1.07)}
 .thumb svg{width:46px;height:46px}
 .exlogo{width:56px;height:56px;border-radius:14px;display:grid;place-items:center;overflow:hidden;margin-bottom:14px;color:var(--red2);
-  background:linear-gradient(135deg,rgba(90,90,96,.5),rgba(76,29,149,.4));box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)}
+  background:linear-gradient(135deg,rgba(90,90,96,.5),rgba(57,57,57,.4));box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)}
 .exlogo img{width:100%;height:100%;object-fit:cover}
 .exlogo svg{width:28px;height:28px}
 .foot-soc{display:flex;justify-content:center;gap:8px;margin:14px 0}
@@ -812,7 +905,7 @@ const SIDE_CSS = String.raw`
 body.cpl{display:block;padding:0}
 .cpl-wrap{display:grid;grid-template-columns:300px 1fr;min-height:100vh}
 .side{position:sticky;top:0;height:100vh;z-index:20;display:flex;flex-direction:column;gap:20px;padding:22px 18px;overflow-y:auto;
-  background:rgba(14,5,8,.95);
+  background:rgba(8,8,8,.95);
   border-right:1px solid var(--line);box-shadow:20px 0 60px rgba(0,0,0,.35)}
 .side::after{content:"";position:fixed;top:0;left:299px;width:1px;height:40vh;pointer-events:none;
   background:linear-gradient(transparent,var(--red2),transparent);animation:edge 5s ease-in-out infinite}
@@ -843,7 +936,7 @@ body.cpl{display:block;padding:0}
 .sv.lock{opacity:.45}
 .sv.final.done .cpi{background:linear-gradient(135deg,#d6d8de,#55565e);box-shadow:0 0 14px rgba(225,227,233,.6)}
 .side-tip{display:flex;gap:10px;padding:12px;border-radius:12px;font-size:.82rem;line-height:1.5;color:#dcdde2;
-  background:linear-gradient(135deg,rgba(90,90,96,.35),rgba(76,29,149,.25));box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)}
+  background:linear-gradient(135deg,rgba(90,90,96,.35),rgba(57,57,57,.25));box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)}
 .side-tip svg{flex:none;width:18px;height:18px;color:var(--red2);margin-top:1px}
 .side-links{display:flex;flex-direction:column;gap:2px;margin-top:auto}
 .side-links a{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;color:var(--muted);text-decoration:none;font-size:.9rem;transition:all .2s}
@@ -1524,7 +1617,7 @@ function tierChoicePage(s, usable) {
     if (!g) { g = { provider: t.provider, tiers: [] }; groups.push(g); }
     g.tiers.push(t);
   }
-  const ACCENT = { "work.ink": "#d6d8de", "Linkvertise": "#17b9d6" };
+  const ACCENT = { "work.ink": "#aeb1ba", "Linkvertise": "#8c8c8c" };
   const clock = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
   const arrow = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
   const bolt = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L4 14h6l-1 8 9-12h-6z"/></svg>';
@@ -1554,18 +1647,18 @@ function tierChoicePage(s, usable) {
   const style = `<style>
     @property --spin{syntax:'<angle>';inherits:false;initial-value:0deg}
     .ghead{display:flex;flex-direction:column;align-items:center;gap:12px;margin-top:4px}
-    .gbadge{width:72px;height:72px;border-radius:50%;display:grid;place-items:center;position:relative;color:#c9b4ff;
-      background:radial-gradient(circle at 50% 32%,#2a1a46,#130a20);border:1px solid #4e3184;
+    .gbadge{width:72px;height:72px;border-radius:50%;display:grid;place-items:center;position:relative;color:#c3c3c3;
+      background:radial-gradient(circle at 50% 32%,#242424,#0f0f0f);border:1px solid #434343;
       box-shadow:inset 0 2px 8px rgba(0,0,0,.6),0 0 26px -4px rgba(225,227,233,.8)}
     .gbadge svg{width:33px;height:33px;filter:drop-shadow(0 0 7px rgba(225,227,233,.7))}
     .gbadge::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:1.5px solid rgba(225,227,233,.55);animation:emblemPulse 2.6s ease-out infinite}
     @keyframes emblemPulse{0%{transform:scale(.9);opacity:.7}100%{transform:scale(1.22);opacity:0}}
     .tiers{display:flex;flex-direction:column;gap:22px;margin-top:22px;text-align:left}
-    .tglabel{display:flex;align-items:center;gap:9px;font-size:11.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#d7bec4;margin:0 0 12px}
+    .tglabel{display:flex;align-items:center;gap:9px;font-size:11.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#c6c6c6;margin:0 0 12px}
     .pdot2{width:9px;height:9px;border-radius:50%;flex:none;background:var(--ac);box-shadow:0 0 10px -1px var(--ac),0 0 0 3px rgba(255,255,255,.04)}
     .trow{display:flex;flex-direction:column;gap:13px}
     .tier{display:flex;align-items:center;gap:15px;text-decoration:none;padding:17px 17px;border-radius:17px;
-      background:linear-gradient(150deg,rgba(255,255,255,.12),rgba(16,8,12,.85));position:relative;overflow:hidden;
+      background:linear-gradient(150deg,rgba(255,255,255,.12),rgba(11,11,11,.85));position:relative;overflow:hidden;
       border:1px solid transparent;transition:transform .14s cubic-bezier(.2,.7,.3,1),box-shadow .22s}
     /* animated gradient border */
     .tier::before{content:"";position:absolute;inset:0;border-radius:17px;padding:1.4px;pointer-events:none;z-index:1;opacity:.75;
@@ -1579,7 +1672,7 @@ function tierChoicePage(s, usable) {
     .tier:hover{transform:translateY(-3px) scale(1.012);box-shadow:0 14px 34px rgba(0,0,0,.5),0 0 30px -6px var(--ac)}
     .tier:active{transform:translateY(-1px)}
     .tic{width:52px;height:52px;border-radius:15px;display:grid;place-items:center;flex:none;color:#fff;position:relative;
-      background:linear-gradient(135deg,var(--ac),rgba(0,0,0,.45));box-shadow:0 0 20px -3px var(--ac),inset 0 1px 0 rgba(255,255,255,.25)}
+      background:linear-gradient(135deg,rgba(255,255,255,.3),rgba(0,0,0,.65));box-shadow:0 0 18px -6px var(--ac),inset 0 1px 0 rgba(255,255,255,.25)}
     .tic svg{width:25px;height:25px;filter:drop-shadow(0 0 4px rgba(255,255,255,.4))}
     .ticring{position:absolute;inset:-4px;border-radius:19px;border:1.5px solid var(--ac);opacity:.45;animation:pulsering 2.4s ease-out infinite}
     @keyframes pulsering{0%{transform:scale(.85);opacity:.6}100%{transform:scale(1.25);opacity:0}}
@@ -1588,7 +1681,7 @@ function tierChoicePage(s, usable) {
     .best-badge{font-style:normal;font-size:9px;font-weight:900;letter-spacing:.06em;padding:4px 8px;border-radius:999px;color:#000000;position:relative;overflow:hidden;
       background:linear-gradient(90deg,var(--ac),#fff,var(--ac));background-size:200% 100%;animation:shimmer 2.2s linear infinite}
     @keyframes shimmer{to{background-position:-200% 0}}
-    .tcps{font-size:12.5px;color:#c0a4ab;display:flex;align-items:center;gap:8px}
+    .tcps{font-size:12.5px;color:#adadad;display:flex;align-items:center;gap:8px}
     .dots{display:inline-flex;gap:4px}
     .dots i{width:7px;height:7px;border-radius:50%;background:var(--ac);box-shadow:0 0 7px -1px var(--ac)}
     .tarw{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;flex:none;color:#fff;
@@ -1753,7 +1846,7 @@ app.get("/getkey", wrap(async (req, res) => {
         (function(){
           var t = document.getElementById("toast"); if (t) document.body.appendChild(t);
           var el = document.getElementById("k"), key = el.dataset.key;
-          var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", f = 0, prefix = 10; // "BLACKCLOVER-"
+          var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", f = 0, prefix = 12; // "BLACKCLOVER-"
           var it = setInterval(function(){
             var out = "";
             for (var i = 0; i < key.length; i++) {
@@ -1796,7 +1889,7 @@ app.get("/getkey", wrap(async (req, res) => {
       @keyframes goSweep{0%,62%{left:-35%}100%{left:135%}}
       @keyframes goPulse{50%{box-shadow:0 10px 34px -4px rgba(255,255,255,.85),inset 0 1px 0 rgba(255,255,255,.35)}}
       .cp-badge{display:inline-flex;align-items:center;gap:7px;margin:2px 0 -2px;padding:5px 12px;border-radius:999px;font-size:11px;font-weight:800;letter-spacing:.08em;
-        color:#ffd9dd;background:linear-gradient(180deg,rgba(138,20,36,.6),rgba(90,12,22,.6));box-shadow:inset 0 0 0 1px rgba(255,255,255,.5),0 0 16px -6px rgba(255,255,255,.8)}
+        color:#e5e5e5;background:linear-gradient(180deg,rgba(57,57,57,.6),rgba(36,36,36,.6));box-shadow:inset 0 0 0 1px rgba(255,255,255,.5),0 0 16px -6px rgba(255,255,255,.8)}
       .cp-badge i{width:7px;height:7px;border-radius:50%;background:#f5f5f7;box-shadow:0 0 8px #f5f5f7;animation:goPulse 1.4s ease-in-out infinite}
     </style>
     <div class="cp-badge"><i></i>CHECKPOINT ${next} OF ${total}</div>
@@ -2264,7 +2357,7 @@ app.get("/reset", (req, res) => {
     <input id="key" placeholder="${KEY_PLACEHOLDER}" autocomplete="off" spellcheck="false" value="${pre}">
     <button id="go" style="width:100%;margin:8px 0 0">Reset HWID</button>
     <p id="msg" class="msg"></p>
-    <p class="muted" style="font-size:.85rem;margin-top:14px">You can reset once every 12 hours.<br>
+    <p class="muted" style="font-size:.85rem;margin-top:14px">Free keys: once every 12 hours. Premium keys: up to 10 times per day.<br>
     <a href="/checker">Check your key</a> · <a href="/">Home</a></p>
     <script>
       (function(){
@@ -2292,6 +2385,22 @@ app.post("/reset-hwid", wrap(async (req, res) => {
   const key = str(req.body && req.body.key);
   if (!KEY_RE.test(key) || await redis.exists("key:" + key) !== 1) {
     return res.json({ success: false, reason: "invalid_or_expired" });
+  }
+
+  const type = str(await redis.hget("key:" + key, "type"));
+  const premium = type !== "" && type !== "free";
+
+  if (premium) {
+    const ck = "resetn:" + key;
+    const n = await redis.incr(ck);
+    if (n === 1) await redis.expire(ck, PREMIUM_RESET_WINDOW_SECONDS);
+    if (n > PREMIUM_RESETS_MAX) {
+      let ttl = await redis.ttl(ck);
+      if (ttl < 0) { await redis.expire(ck, PREMIUM_RESET_WINDOW_SECONDS); ttl = PREMIUM_RESET_WINDOW_SECONDS; }
+      return res.json({ success: false, reason: "cooldown", retryInSeconds: ttl });
+    }
+    await redis.hdel("key:" + key, "hwid", "hwids");
+    return res.json({ success: true, premium: true, remaining: PREMIUM_RESETS_MAX - n });
   }
 
   const ok = await redis.set("resetcd:" + key, 1, { nx: true, ex: RESET_COOLDOWN_SECONDS });
@@ -2368,6 +2477,7 @@ app.post("/admin/api/reset-hwid", wrap(async (req, res) => {
   const key = str(req.body.key);
   await redis.hdel("key:" + key, "hwid", "hwids");
   await redis.del("resetcd:" + key);
+  await redis.del("resetn:" + key);
   res.json({ success: true });
 }));
 
@@ -2453,16 +2563,16 @@ app.get("/admin", (req, res) => {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>BlackClover · Admin</title>
 <style>
-  :root{--red:#cfd1d8;--red2:#f5f5f7;--violet:#d6d8de;--bg:#000000;--bg2:#070708;
+  :root{--red:#3d3d45;--red2:#f5f5f7;--violet:#d6d8de;--bg:#000000;--bg2:#070708;
     --panel:#0b0b0c;--panel2:#111113;--stroke:#26262a;--stroke2:#35353a;
-    --text:#f2f2f4;--muted:#8a8c94;--good:#5fe39b;--gold:#e8e9ed;--blue:#5b8cff}
+    --text:#f2f2f4;--muted:#8a8c94;--good:#5fe39b;--gold:#e8e9ed;--blue:#8a8a8a}
   *{box-sizing:border-box}
   body{margin:0;min-height:100vh;color:var(--text);font-family:system-ui,"Segoe UI",sans-serif;
-    background:radial-gradient(1100px 500px at 50% -8%,#2a0a12 0%,var(--bg) 60%)}
+    background:radial-gradient(1100px 500px at 50% -8%,#141414 0%,var(--bg) 60%)}
   .wrap{max-width:1080px;margin:0 auto;padding:26px 18px 60px}
   .top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:22px}
   .brand{display:flex;align-items:center;gap:12px}
-  .logo{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--red2),#7a0a18);
+  .logo{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--red2),#2d2d2d);
     display:grid;place-items:center;font-size:22px;box-shadow:0 0 0 1px var(--stroke2),0 0 20px rgba(255,255,255,.4)}
   .brand h1{margin:0;font-size:20px;font-weight:900;letter-spacing:.02em;
     background:linear-gradient(90deg,var(--red2),#fff);-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -2501,9 +2611,9 @@ app.get("/admin", (req, res) => {
     color:#fff;background:linear-gradient(20deg,var(--red2),#2c2c32);box-shadow:0 4px 14px rgba(255,255,255,.3);
     transition:transform .1s,filter .15s;flex:1 1 auto}
   button.b:hover{filter:brightness(1.1)} button.b:active{transform:translateY(1px)}
-  button.b.v{background:linear-gradient(20deg,var(--violet),#5b32b8);box-shadow:0 4px 14px rgba(225,227,233,.3)}
-  button.b.ghost{background:#160a0e;color:#c9ccd3;border:1px solid var(--stroke2);box-shadow:none}
-  button.b.ghost:hover{background:#1f0e13}
+  button.b.v{background:linear-gradient(20deg,var(--violet),#4e4e4e);box-shadow:0 4px 14px rgba(225,227,233,.3)}
+  button.b.ghost{background:#0e0e0e;color:#c9ccd3;border:1px solid var(--stroke2);box-shadow:none}
+  button.b.ghost:hover{background:#141414}
   button.b.gold{background:linear-gradient(20deg,var(--gold),#e68c14);color:#281800;box-shadow:0 4px 14px rgba(225,227,233,.3)}
   .hint{font-size:11px;color:var(--muted);margin:10px 0 0;line-height:1.5}
   .full{width:100%;margin-top:4px}
@@ -2519,12 +2629,12 @@ app.get("/admin", (req, res) => {
   .krow .km{font-family:ui-monospace,"SF Mono",monospace;font-size:13.5px;color:#e8e8ec;font-weight:600;
     letter-spacing:.02em;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
   .badge{font-size:10px;font-weight:800;padding:4px 8px;border-radius:999px;letter-spacing:.05em;flex:none}
-  .badge.user{background:rgba(91,140,255,.16);color:#9cc0ff} .badge.life{background:rgba(225,227,233,.16);color:var(--gold)}
-  .badge.admin{background:rgba(225,227,233,.18);color:#c3a7ff} .badge.custom{background:rgba(255,255,255,.16);color:var(--red2)}
+  .badge.user{background:rgba(138,138,138,.16);color:#bcbcbc} .badge.life{background:rgba(225,227,233,.16);color:var(--gold)}
+  .badge.admin{background:rgba(225,227,233,.18);color:#b9b9b9} .badge.custom{background:rgba(255,255,255,.16);color:var(--red2)}
   .left{font-size:11px;color:var(--muted);flex:none;font-variant-numeric:tabular-nums}
   .empty{text-align:center;color:var(--muted);font-size:13px;padding:26px 0}
   .out{background:#050506;border:1px solid var(--stroke);border-radius:11px;padding:13px 14px;margin-top:12px;
-    font-family:ui-monospace,monospace;font-size:12.5px;color:#d9c3c8;white-space:pre-wrap;word-break:break-word;
+    font-family:ui-monospace,monospace;font-size:12.5px;color:#cacaca;white-space:pre-wrap;word-break:break-word;
     max-height:220px;overflow:auto;display:none}
   .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);opacity:0;
     background:#111113;border:1px solid var(--stroke2);border-radius:11px;padding:11px 18px;font-size:13px;font-weight:600;
