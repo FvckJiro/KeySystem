@@ -160,8 +160,14 @@ async function createKey(ttlSeconds, type, opts = {}) {
       await redis.hset("key:" + candidate, fields);
       if (ttlSeconds) await redis.expire("key:" + candidate, ttlSeconds);
 
-      await redis.lpush("recent:keys", JSON.stringify({ key: candidate, at, type, label, maxdev }));
-      await redis.ltrim("recent:keys", 0, 99);
+      const entry = JSON.stringify({ key: candidate, at, type, label, maxdev });
+      await redis.lpush("recent:keys", entry);
+      await redis.ltrim("recent:keys", 0, 1999);
+      if (type !== "free") {
+        // admin-made keys (booster / premium / staff / custom) get their own history so free-key traffic can't push them out
+        await redis.lpush("recent:admin", entry);
+        await redis.ltrim("recent:admin", 0, 4999);
+      }
       await redis.incr("stats:generated");
       return candidate;
     }
@@ -2599,30 +2605,56 @@ app.post("/admin/api/clear-bans", wrap(async (req, res) => {
   res.json({ success: true, bansCleared: cleared });
 }));
 
+function keyCategory(it) {
+  const label = String(it.label || "").toUpperCase();
+  const pfx = String(it.key || "").split("-")[0].toUpperCase();
+  const tag = label + " " + pfx;
+  if (/BOOST/.test(tag)) return "booster";
+  if (/STAFF/.test(tag)) return "staff";
+  if (/PREM/.test(tag) || it.type === "lifetime" || it.type === "admin") return "premium";
+  if (it.type === "free" || !it.type) return "free";
+  return "other";
+}
+
 app.post("/admin/api/recent", wrap(async (req, res) => {
   const total = Number(await redis.get("stats:generated")) || 0;
-  const raw = (await redis.lrange("recent:keys", 0, 99)) || [];
-  let items = raw.map(x => { try { return JSON.parse(x); } catch (e) { return null; } }).filter(Boolean);
+  const [rawAdmin, rawAll] = await Promise.all([
+    redis.lrange("recent:admin", 0, 4999),
+    redis.lrange("recent:keys", 0, 1999),
+  ]);
 
-  if (items.length) {
+  // merge both histories, de-duplicate by key, newest first
+  const seen = new Map();
+  for (const x of [...(rawAdmin || []), ...(rawAll || [])]) {
+    let it = x;
+    if (typeof x === "string") { try { it = JSON.parse(x); } catch (e) { continue; } }
+    if (!it || typeof it !== "object" || !it.key || seen.has(it.key)) continue;
+    seen.set(it.key, it);
+  }
+  const items = [...seen.values()].sort((a, b) => (Number(b.at) || 0) - (Number(a.at) || 0));
+
+  // live status for every key: ttl -2 = gone (expired/revoked), -1 = lifetime, >0 = seconds left
+  for (let i = 0; i < items.length; i += 500) {
+    const chunk = items.slice(i, i + 500);
     try {
       const pipe = redis.pipeline();
-      items.forEach(it => pipe.ttl("key:" + it.key));
+      chunk.forEach(it => pipe.ttl("key:" + it.key));
       const ttls = await pipe.exec();
-      items.forEach((it, i) => {
-        const t = Number(ttls[i]);
-        it.active = t !== -2;
-        it.ttl = t;
-      });
+      chunk.forEach((it, k) => { const t = Number(ttls[k]); it.ttl = t; it.active = t !== -2; });
     } catch (e) {
-      for (const it of items) { it.active = (await redis.exists("key:" + it.key)) === 1; it.ttl = it.active ? -1 : -2; }
+      for (const it of chunk) { const ex = (await redis.exists("key:" + it.key)) === 1; it.active = ex; it.ttl = ex ? -1 : -2; }
     }
   }
 
-  // Only show live keys (generated + still active) — expired keys are hidden.
-  items = items.filter(it => it.active);
-  const activeCount = items.length;
-  res.json({ total, active: activeCount, shown: activeCount, items });
+  const counts = { booster: {}, premium: {}, staff: {}, free: {}, other: {} };
+  for (const c of Object.keys(counts)) counts[c] = { total: 0, active: 0, expired: 0 };
+  for (const it of items) {
+    it.category = keyCategory(it);
+    const c = counts[it.category];
+    c.total++; if (it.active) c.active++; else c.expired++;
+  }
+  const active = items.filter(it => it.active).length;
+  res.json({ total, shown: items.length, active, expired: items.length - active, counts, items });
 }));
 
 app.get("/admin", (req, res) => {
@@ -2632,181 +2664,222 @@ app.get("/admin", (req, res) => {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>BlackClover · Admin</title>
 <style>
-  :root{--red:#3d3d45;--red2:#f5f5f7;--violet:#d6d8de;--bg:#000000;--bg2:#070708;
-    --panel:#0b0b0c;--panel2:#111113;--stroke:#26262a;--stroke2:#35353a;
-    --text:#f2f2f4;--muted:#8a8c94;--good:#5fe39b;--gold:#e8e9ed;--blue:#8a8a8a}
+  :root{--bg:#0e1013;--panel:#15181d;--panel2:#1b1f26;--line:#262b33;--line2:#323843;
+    --text:#e8eaed;--muted:#9aa2af;--faint:#6b7380;--ok:#4cc38a;--okbg:rgba(76,195,138,.12);
+    --warn:#e0a84a;--warnbg:rgba(224,168,74,.12);--bad:#e5645f;--badbg:rgba(229,100,95,.12);--accent:#ffffff}
   *{box-sizing:border-box}
-  body{margin:0;min-height:100vh;color:var(--text);font-family:system-ui,"Segoe UI",sans-serif;
-    background:radial-gradient(1100px 500px at 50% -8%,#141414 0%,var(--bg) 60%)}
-  .wrap{max-width:1080px;margin:0 auto;padding:26px 18px 60px}
-  .top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:22px}
-  .brand{display:flex;align-items:center;gap:12px}
-  .logo{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--red2),#2d2d2d);
-    display:grid;place-items:center;font-size:22px;box-shadow:0 0 0 1px var(--stroke2),0 0 20px rgba(255,255,255,.4)}
-  .brand h1{margin:0;font-size:20px;font-weight:900;letter-spacing:.02em;
-    background:linear-gradient(90deg,var(--red2),#fff);-webkit-background-clip:text;background-clip:text;color:transparent}
-  .brand .tag{font-size:11px;color:var(--muted);margin-top:1px}
-  .secret{margin-left:auto;display:flex;align-items:center;gap:8px;background:var(--panel);
-    border:1px solid var(--stroke);border-radius:11px;padding:7px 10px}
-  .secret svg{width:15px;height:15px;color:var(--muted);flex:none}
-  .secret input{background:transparent;border:0;outline:0;color:var(--text);font-size:13px;width:150px}
-  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}
-  .stat{background:linear-gradient(160deg,var(--panel2),var(--panel));border:1px solid var(--stroke);
-    border-radius:14px;padding:14px 16px;position:relative;overflow:hidden}
-  .stat .n{font-size:26px;font-weight:900;line-height:1}
-  .stat .l{font-size:11px;color:var(--muted);margin-top:5px;text-transform:uppercase;letter-spacing:.05em}
-  .stat.g .n{color:var(--good)} .stat.r .n{color:var(--red2)} .stat.v .n{color:var(--violet)}
-  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
-  @media(max-width:720px){.grid2{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}.secret{margin-left:0;width:100%}.secret input{width:100%}}
-  .card{background:linear-gradient(170deg,var(--panel2),var(--panel));border:1px solid var(--stroke);
-    border-radius:16px;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
-  .card h2{margin:0 0 14px;font-size:14px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
-    color:#c9ccd3;display:flex;align-items:center;gap:8px}
-  .card h2 .bar{width:3px;height:14px;border-radius:2px;background:linear-gradient(var(--red2),var(--violet))}
-  label.f{display:block;font-size:11px;color:var(--muted);margin:0 0 5px;text-transform:uppercase;letter-spacing:.04em}
-  input.t{width:100%;background:#050506;border:1px solid var(--stroke);border-radius:10px;
-    color:var(--text);font-size:14px;padding:11px 12px;outline:0;transition:border .15s,box-shadow .15s}
-  input.t:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(255,255,255,.18)}
-  input.t::placeholder{color:#6f565d}
-  input.t:disabled{opacity:.4}
-  .row{display:grid;gap:10px;margin-bottom:12px}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);
+    font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:1120px;margin:0 auto;padding:28px 20px 72px}
+  .top{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--line)}
+  .brand h1{margin:0;font-size:20px;font-weight:650;letter-spacing:.01em;color:var(--text)}
+  .brand .tag{font-size:13px;color:var(--muted);margin-top:2px}
+  .secret{margin-left:auto;display:flex;align-items:center;gap:10px}
+  .secret label{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+  .secret input{width:220px}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .stat .n{font-size:26px;font-weight:650;line-height:1.1;font-variant-numeric:tabular-nums}
+  .stat .l{font-size:12px;color:var(--muted);margin-top:6px;font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+  .stat.ok .n{color:var(--ok)} .stat.bad .n{color:var(--bad)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;margin-bottom:16px}
+  @media(max-width:820px){.grid2{grid-template-columns:1fr}.stats{grid-template-columns:1fr 1fr}.secret{margin-left:0;width:100%}.secret input{flex:1;width:auto}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px}
+  .card h2{margin:0 0 16px;font-size:15px;font-weight:650;color:var(--text)}
+  label.f{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+  input.t,select.t{width:100%;background:var(--bg);border:1px solid var(--line2);border-radius:8px;color:var(--text);
+    font:inherit;padding:10px 12px;outline:0;transition:border-color .15s,box-shadow .15s}
+  input.t:focus,select.t:focus{border-color:#8a93a3;box-shadow:0 0 0 3px rgba(255,255,255,.08)}
+  input.t::placeholder{color:var(--faint)}
+  input.t:disabled{opacity:.45}
+  .row{display:grid;gap:12px;margin-bottom:14px}
   .r4{grid-template-columns:repeat(4,1fr)} .r2{grid-template-columns:1fr 1fr} .r3{grid-template-columns:repeat(3,1fr)}
-  @media(max-width:520px){.r4{grid-template-columns:1fr 1fr}}
-  .chk{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--text);cursor:pointer;
-    padding:10px 12px;background:#050506;border:1px solid var(--stroke);border-radius:10px;margin-bottom:12px}
-  .chk input{width:16px;height:16px;accent-color:var(--red2)}
+  @media(max-width:520px){.r4{grid-template-columns:1fr 1fr}.r3{grid-template-columns:1fr}}
+  .chk{display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer;padding:10px 12px;
+    background:var(--bg);border:1px solid var(--line2);border-radius:8px;margin-bottom:14px}
+  .chk input{width:16px;height:16px;accent-color:#fff}
   .btns{display:flex;flex-wrap:wrap;gap:8px}
-  button.b{border:0;border-radius:10px;padding:11px 14px;font-weight:800;font-size:13px;cursor:pointer;
-    color:#fff;background:linear-gradient(20deg,var(--red2),#2c2c32);box-shadow:0 4px 14px rgba(255,255,255,.3);
-    transition:transform .1s,filter .15s;flex:1 1 auto}
-  button.b:hover{filter:brightness(1.1)} button.b:active{transform:translateY(1px)}
-  button.b.v{background:linear-gradient(20deg,var(--violet),#4e4e4e);box-shadow:0 4px 14px rgba(225,227,233,.3)}
-  button.b.ghost{background:#0e0e0e;color:#c9ccd3;border:1px solid var(--stroke2);box-shadow:none}
-  button.b.ghost:hover{background:#141414}
-  button.b.gold{background:linear-gradient(20deg,var(--gold),#e68c14);color:#281800;box-shadow:0 4px 14px rgba(225,227,233,.3)}
-  .hint{font-size:11px;color:var(--muted);margin:10px 0 0;line-height:1.5}
-  .full{width:100%;margin-top:4px}
-  .keyscard{grid-column:1/-1}
-  .khead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
-  .khead .live{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);cursor:pointer}
-  .klist{display:flex;flex-direction:column;gap:8px;max-height:430px;overflow:auto;padding-right:4px}
-  .krow{display:flex;align-items:center;gap:12px;background:#050506;border:1px solid var(--stroke);
-    border-radius:11px;padding:11px 13px}
-  .krow .pulse{width:9px;height:9px;border-radius:50%;background:var(--good);flex:none;box-shadow:0 0 9px var(--good);
-    animation:pz 1.8s ease-in-out infinite}
-  @keyframes pz{50%{opacity:.4}}
-  .krow .km{font-family:ui-monospace,"SF Mono",monospace;font-size:13.5px;color:#e8e8ec;font-weight:600;
-    letter-spacing:.02em;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
-  .badge{font-size:10px;font-weight:800;padding:4px 8px;border-radius:999px;letter-spacing:.05em;flex:none}
-  .badge.user{background:rgba(138,138,138,.16);color:#bcbcbc} .badge.life{background:rgba(225,227,233,.16);color:var(--gold)}
-  .badge.admin{background:rgba(225,227,233,.18);color:#b9b9b9} .badge.custom{background:rgba(255,255,255,.16);color:var(--red2)}
-  .left{font-size:11px;color:var(--muted);flex:none;font-variant-numeric:tabular-nums}
-  .empty{text-align:center;color:var(--muted);font-size:13px;padding:26px 0}
-  .out{background:#050506;border:1px solid var(--stroke);border-radius:11px;padding:13px 14px;margin-top:12px;
-    font-family:ui-monospace,monospace;font-size:12.5px;color:#cacaca;white-space:pre-wrap;word-break:break-word;
+  button.b{border:1px solid transparent;border-radius:8px;padding:10px 16px;font:inherit;font-weight:600;cursor:pointer;
+    color:#0e1013;background:var(--accent);transition:background .15s,border-color .15s;flex:1 1 auto}
+  button.b:hover{background:#d9dce1}
+  button.b:active{transform:translateY(1px)}
+  button.b.ghost{background:transparent;color:var(--text);border-color:var(--line2)}
+  button.b.ghost:hover{background:var(--panel2)}
+  button.b.danger{background:transparent;color:var(--bad);border-color:rgba(229,100,95,.45)}
+  button.b.danger:hover{background:var(--badbg)}
+  button.b.sm{padding:6px 12px;font-size:13px;flex:0 0 auto}
+  .hint{font-size:13px;color:var(--muted);margin:12px 0 0;line-height:1.5}
+  .out{background:var(--bg);border:1px solid var(--line2);border-radius:8px;padding:12px 14px;margin-top:14px;
+    font:13px/1.55 ui-monospace,"SF Mono",Consolas,monospace;color:var(--text);white-space:pre-wrap;word-break:break-word;
     max-height:220px;overflow:auto;display:none}
-  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);opacity:0;
-    background:#111113;border:1px solid var(--stroke2);border-radius:11px;padding:11px 18px;font-size:13px;font-weight:600;
-    box-shadow:0 10px 30px rgba(0,0,0,.5);transition:.25s;pointer-events:none;z-index:50}
+
+  .toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+  .toolbar h2{margin:0 8px 0 0;font-size:16px;font-weight:650}
+  .toolbar .search{flex:1 1 220px;min-width:180px}
+  .seg{display:inline-flex;border:1px solid var(--line2);border-radius:8px;overflow:hidden}
+  .seg button{background:transparent;border:0;color:var(--muted);font:inherit;font-weight:600;padding:8px 14px;cursor:pointer}
+  .seg button+button{border-left:1px solid var(--line2)}
+  .seg button.on{background:var(--panel2);color:var(--text)}
+  .live{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);cursor:pointer}
+  .live input{accent-color:#fff}
+
+  .sec{background:var(--panel);border:1px solid var(--line);border-radius:12px;margin-bottom:14px;overflow:hidden}
+  .sec>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:14px 18px;flex-wrap:wrap}
+  .sec>summary::-webkit-details-marker{display:none}
+  .sec>summary:hover{background:var(--panel2)}
+  .sec .caret{width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(-45deg);transition:transform .15s;flex:none}
+  .sec[open] .caret{transform:rotate(45deg)}
+  .sec .st{font-size:15px;font-weight:650}
+  .sec .sub{font-size:13px;color:var(--muted)}
+  .sec .cnt{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .pill{font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;border:1px solid var(--line2);color:var(--muted);font-variant-numeric:tabular-nums}
+  .pill.ok{color:var(--ok);background:var(--okbg);border-color:transparent}
+  .pill.bad{color:var(--bad);background:var(--badbg);border-color:transparent}
+  .tbl{border-top:1px solid var(--line);max-height:380px;overflow:auto}
+  table{width:100%;border-collapse:collapse}
+  thead th{position:sticky;top:0;background:var(--panel2);text-align:left;font-size:12px;color:var(--muted);font-weight:600;
+    text-transform:uppercase;letter-spacing:.05em;padding:10px 18px;border-bottom:1px solid var(--line);white-space:nowrap}
+  tbody td{padding:10px 18px;border-bottom:1px solid var(--line);vertical-align:middle;white-space:nowrap}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr:hover{background:rgba(255,255,255,.025)}
+  td.key{font:600 13.5px ui-monospace,"SF Mono",Consolas,monospace;color:var(--text);cursor:pointer;letter-spacing:.02em}
+  td.key:hover{text-decoration:underline}
+  td.mut{color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+  td.typ{font-size:13px;font-weight:600;color:var(--text)}
+  .badge{display:inline-block;font-size:12px;font-weight:600;padding:2px 10px;border-radius:999px}
+  .badge.act{color:var(--ok);background:var(--okbg)}
+  .badge.exp{color:var(--bad);background:var(--badbg)}
+  .badge.life{color:var(--warn);background:var(--warnbg)}
+  .empty{text-align:center;color:var(--muted);font-size:14px;padding:28px 0}
+  .secfoot{display:flex;gap:8px;padding:12px 18px;border-top:1px solid var(--line);background:var(--panel)}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(16px);opacity:0;background:var(--panel2);
+    border:1px solid var(--line2);border-radius:8px;padding:10px 18px;font-size:14px;font-weight:600;
+    box-shadow:0 8px 24px rgba(0,0,0,.45);transition:.2s;pointer-events:none;z-index:50}
   .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
-  .toast.err{color:var(--red2)} .toast.ok{color:var(--good)}
+  .toast.err{color:var(--bad)} .toast.ok{color:var(--ok)}
 </style></head>
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand">
-      <div class="logo">👑</div>
-      <div><h1>BlackClover Admin</h1><div class="tag">Key management dashboard</div></div>
-    </div>
+    <div class="brand"><h1>BlackClover Admin</h1><div class="tag">Key management dashboard</div></div>
     <div class="secret">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-      <input id="secret" type="password" placeholder="Admin secret" autocomplete="current-password">
+      <label for="secret">Admin secret</label>
+      <input id="secret" class="t" type="password" placeholder="Enter secret" autocomplete="current-password">
     </div>
   </div>
 
   <div class="stats">
-    <div class="stat v"><div class="n" id="s-total">—</div><div class="l">Total generated</div></div>
-    <div class="stat g"><div class="n" id="s-active">—</div><div class="l">Active keys</div></div>
-    <div class="stat r"><div class="n" id="s-upd">—</div><div class="l">Last refresh</div></div>
+    <div class="stat"><div class="n" id="s-total">-</div><div class="l">Total generated</div></div>
+    <div class="stat ok"><div class="n" id="s-active">-</div><div class="l">Active</div></div>
+    <div class="stat bad"><div class="n" id="s-exp">-</div><div class="l">Expired</div></div>
+    <div class="stat"><div class="n" id="s-upd">-</div><div class="l">Last refresh</div></div>
   </div>
 
   <div class="grid2">
     <div class="card">
-      <h2><span class="bar"></span>Create Keys</h2>
-      <div class="row r4">
-        <div><label class="f">Days</label><input id="days" class="t" type="number" min="0" inputmode="numeric" placeholder="0"></div>
-        <div><label class="f">Hours</label><input id="hours" class="t" type="number" min="0" inputmode="numeric" placeholder="0"></div>
-        <div><label class="f">Mins</label><input id="minutes" class="t" type="number" min="0" inputmode="numeric" placeholder="0"></div>
-        <div><label class="f">Amount</label><input id="amount" class="t" type="number" min="1" max="50" inputmode="numeric" value="1"></div>
+      <h2>Create keys</h2>
+      <div class="row r2">
+        <div><label class="f" for="preset">Key type</label>
+          <select id="preset" class="t">
+            <option value="">Custom</option>
+            <option value="BOOSTER">Booster</option>
+            <option value="PREMIUM">Premium</option>
+            <option value="STAFF">Staff</option>
+          </select></div>
+        <div><label class="f" for="amount">Amount</label><input id="amount" class="t" type="number" min="1" max="50" inputmode="numeric" value="1"></div>
       </div>
       <div class="row r3">
-        <div><label class="f">Max devices</label><input id="devices" class="t" type="number" min="1" max="100" inputmode="numeric" value="1"></div>
-        <div><label class="f">Name / label</label><input id="label" class="t" placeholder="e.g. PREMIUM" autocomplete="off" maxlength="24"></div>
-        <div><label class="f">Key prefix</label><input id="prefix" class="t" placeholder="BLACKCLOVER" autocomplete="off" maxlength="12" value="BLACKCLOVER" style="text-transform:uppercase"></div>
+        <div><label class="f" for="days">Days</label><input id="days" class="t" type="number" min="0" inputmode="numeric" placeholder="0"></div>
+        <div><label class="f" for="hours">Hours</label><input id="hours" class="t" type="number" min="0" inputmode="numeric" placeholder="0"></div>
+        <div><label class="f" for="minutes">Minutes</label><input id="minutes" class="t" type="number" min="0" inputmode="numeric" placeholder="0"></div>
       </div>
-      <p class="hint" style="margin:-4px 0 10px">Prefix sets the start of the key — e.g. <b style="color:#f5f5f7">PREMIUM</b>-XXXX-XXXX-XXXX. Letters only.</p>
+      <div class="row r3">
+        <div><label class="f" for="devices">Max devices</label><input id="devices" class="t" type="number" min="1" max="100" inputmode="numeric" value="1"></div>
+        <div><label class="f" for="label">Label</label><input id="label" class="t" placeholder="e.g. PREMIUM" autocomplete="off" maxlength="24"></div>
+        <div><label class="f" for="prefix">Key prefix</label><input id="prefix" class="t" placeholder="BLACKCLOVER" autocomplete="off" maxlength="12" value="BLACKCLOVER" style="text-transform:uppercase"></div>
+      </div>
       <label class="chk"><input id="lifetime" type="checkbox">Lifetime key (never expires)</label>
       <div class="btns">
-        <button class="b v" data-a="create-key">Create Key</button>
-        <button class="b ghost" id="copyKeys" style="display:none;flex:0 0 auto">Copy Keys</button>
+        <button class="b" data-a="create-key">Create keys</button>
+        <button class="b ghost" id="copyKeys" style="display:none;flex:0 0 auto">Copy keys</button>
       </div>
+      <p class="hint">Picking a key type fills the label and prefix, for example PREMIUM-XXXX-XXXX-XXXX. The label decides which section a key lands in.</p>
     </div>
 
     <div class="card">
-      <h2><span class="bar"></span>Manage</h2>
+      <h2>Manage</h2>
       <div class="row">
-        <div><label class="f">Key</label><input id="key" class="t" placeholder="BLACKCLOVER-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false"></div>
+        <div><label class="f" for="key">Key</label><input id="key" class="t" placeholder="BLACKCLOVER-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false"></div>
       </div>
       <div class="row r2">
-        <div><label class="f">HWID</label><input id="hwid" class="t" placeholder="device hwid" autocomplete="off" spellcheck="false"></div>
-        <div><label class="f">Reason</label><input id="reason" class="t" placeholder="blacklist reason" autocomplete="off"></div>
+        <div><label class="f" for="hwid">HWID</label><input id="hwid" class="t" placeholder="Device HWID" autocomplete="off" spellcheck="false"></div>
+        <div><label class="f" for="reason">Reason</label><input id="reason" class="t" placeholder="Blacklist reason" autocomplete="off"></div>
       </div>
       <div class="btns">
-        <button class="b ghost" data-a="key-info">Key Info</button>
+        <button class="b ghost" data-a="key-info">Key info</button>
         <button class="b ghost" data-a="reset-hwid">Reset HWID</button>
-        <button class="b" data-a="revoke-key">Revoke</button>
+        <button class="b danger" data-a="revoke-key">Revoke</button>
       </div>
       <div class="btns" style="margin-top:8px">
-        <button class="b" data-a="blacklist">Blacklist</button>
+        <button class="b danger" data-a="blacklist">Blacklist</button>
         <button class="b ghost" data-a="unblacklist">Unblacklist</button>
-        <button class="b ghost" data-a="blacklist-list">View List</button>
-        <button class="b gold" data-a="clear-bans">Clear Bans</button>
+        <button class="b ghost" data-a="blacklist-list">View list</button>
+        <button class="b ghost" data-a="clear-bans">Clear bans</button>
       </div>
       <p class="hint">Blacklist uses the HWID field, or the key's bound HWID if HWID is empty.</p>
       <div class="out" id="out"></div>
     </div>
-
-    <div class="card keyscard">
-      <div class="khead">
-        <h2 style="margin:0"><span class="bar"></span>Active Keys</h2>
-        <button class="b ghost" style="flex:0 0 auto;padding:8px 12px" data-a="recent">Refresh</button>
-        <label class="live"><input id="autorefresh" type="checkbox" style="accent-color:var(--red2)">Auto-refresh (5s)</label>
-      </div>
-      <div class="klist" id="klist"><div class="empty">Click Refresh to load active keys.</div></div>
-    </div>
   </div>
+
+  <div class="toolbar">
+    <h2>Keys</h2>
+    <input id="search" class="t search" placeholder="Search keys" autocomplete="off" spellcheck="false">
+    <div class="seg" id="seg">
+      <button data-s="all" class="on">All</button>
+      <button data-s="active">Active</button>
+      <button data-s="expired">Expired</button>
+    </div>
+    <button class="b ghost sm" data-a="recent">Refresh</button>
+    <label class="live"><input id="autorefresh" type="checkbox">Auto-refresh (10s)</label>
+  </div>
+  <div id="sections"><div class="empty">Enter the admin secret and click Refresh to load every generated key.</div></div>
 </div>
 <div class="toast" id="toast"></div>
 
 <script>
   (function(){
+    var NL = String.fromCharCode(10);
     var v = function(id){ return document.getElementById(id).value.trim(); };
     var life = document.getElementById("lifetime");
     var copyBtn = document.getElementById("copyKeys");
     var out = document.getElementById("out");
-    var klist = document.getElementById("klist");
+    var sections = document.getElementById("sections");
     var auto = document.getElementById("autorefresh");
     var toastEl = document.getElementById("toast");
-    var lastKeys = [], timer = null;
+    var searchEl = document.getElementById("search");
+    var lastKeys = [], timer = null, data = null, statusFilter = "all";
+    var openState = { paid:true, free:false };
+    var CATS = [
+      { id:"paid", name:"Generated keys", sub:"Booster, premium, staff and custom keys" },
+      { id:"free", name:"Free keys",      sub:"Generated by users on the website" }
+    ];
+    var TYPE_NAMES = { booster:"Booster", premium:"Premium", staff:"Staff", other:"Custom", free:"Free" };
 
     function toast(msg, kind){
       toastEl.textContent = msg; toastEl.className = "toast on " + (kind||"");
       clearTimeout(toastEl._t); toastEl._t = setTimeout(function(){ toastEl.className = "toast " + (kind||""); }, 2200);
     }
     function showOut(obj){ out.style.display = "block"; out.textContent = typeof obj === "string" ? obj : JSON.stringify(obj, null, 2); }
+    function el(tag, cls, text){ var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
 
     life.onchange = function(){
       ["days","hours","minutes"].forEach(function(id){ document.getElementById(id).disabled = life.checked; });
+    };
+    document.getElementById("preset").onchange = function(){
+      var p = this.value;
+      document.getElementById("label").value = p;
+      document.getElementById("prefix").value = p || "BLACKCLOVER";
     };
 
     function body(){
@@ -2833,14 +2906,14 @@ app.get("/admin", (req, res) => {
           if (a === "create-key") {
             if (d.success){
               lastKeys = d.keys;
-              copyBtn.style.display = "inline-block"; copyBtn.textContent = "Copy Keys";
-              showOut("✓ " + d.keys.length + " key(s) · " + (d.label || (life.checked?"Lifetime":"Premium")) +
-                " · " + d.duration + " · " + d.devices + " device(s)\\n\\n" + d.keys.join("\\n"));
+              copyBtn.style.display = "inline-block"; copyBtn.textContent = "Copy keys";
+              showOut("Created " + d.keys.length + " key(s) | " + (d.label || (life.checked ? "Lifetime" : "Premium")) +
+                " | " + d.duration + " | " + d.devices + " device(s)" + NL + NL + d.keys.join(NL));
               toast("Created " + d.keys.length + " key(s)", "ok");
               loadKeys();
             } else { showOut(d.error || d); toast(d.error || "Failed", "err"); }
           } else if (a === "recent") {
-            renderKeys(d);
+            setData(d);
           } else {
             showOut(d);
             if (d.success) toast("Done", "ok");
@@ -2850,49 +2923,127 @@ app.get("/admin", (req, res) => {
       };
     });
 
-    function fmtLeft(t){
-      if (t === -1) return "lifetime";
-      if (t < 0) return "";
+    function fmtLeft(it){
+      var t = it.ttl;
+      if (!it.active) return "-";
+      if (t === -1) return "Lifetime";
       var h = Math.floor(t/3600), m = Math.floor(t%3600/60);
-      if (h >= 24) return Math.floor(h/24) + "d " + (h%24) + "h left";
-      if (h >= 1) return h + "h " + m + "m left";
-      return m + "m left";
+      if (h >= 24) return Math.floor(h/24) + "d " + (h%24) + "h";
+      if (h >= 1) return h + "h " + m + "m";
+      return m + "m";
     }
-    function badgeFor(it){
-      if (it.label && it.type === "custom") return ["custom", it.label.toUpperCase()];
-      if (it.type === "lifetime") return ["life","LIFETIME"];
-      if (it.type === "admin") return ["admin","ADMIN"];
-      return ["user","USER"];
+    function fmtDate(ms){
+      if (!ms) return "-";
+      var d = new Date(ms);
+      return d.toLocaleDateString(undefined, { month:"short", day:"numeric", year:"numeric" }) + " " +
+        d.toLocaleTimeString(undefined, { hour:"2-digit", minute:"2-digit" });
     }
-    function renderKeys(d){
-      var stamp = new Date().toLocaleTimeString();
-      document.getElementById("s-upd").textContent = stamp.replace(/:\\d+ /," ");
-      if (d.error){ klist.innerHTML = '<div class="empty">' + (d.error||"Error") + '</div>'; toast(d.error, "err"); auto.checked = false; stopTimer(); return; }
-      document.getElementById("s-total").textContent = d.total != null ? d.total : "—";
-      document.getElementById("s-active").textContent = d.active != null ? d.active : (d.items?d.items.length:"—");
-      if (!d.items || !d.items.length){ klist.innerHTML = '<div class="empty">No active keys right now.</div>'; return; }
-      klist.innerHTML = d.items.map(function(it){
-        var bg = badgeFor(it), left = fmtLeft(it.ttl);
-        return '<div class="krow"><span class="pulse"></span>'
-          + '<span class="km" title="Click to copy" data-k="' + it.key + '">' + it.key + '</span>'
-          + '<span class="badge ' + bg[0] + '">' + bg[1] + '</span>'
-          + (left ? '<span class="left">' + left + '</span>' : '')
-          + '</div>';
-      }).join("");
-      klist.querySelectorAll(".km").forEach(function(el){
-        el.onclick = function(){ navigator.clipboard.writeText(el.dataset.k).then(function(){ toast("Key copied", "ok"); }); };
+
+    function setData(d){
+      document.getElementById("s-upd").textContent = new Date().toLocaleTimeString(undefined, { hour:"2-digit", minute:"2-digit", second:"2-digit" });
+      if (d.error){
+        sections.innerHTML = ""; sections.appendChild(el("div","empty", d.error));
+        toast(d.error, "err"); auto.checked = false; stopTimer(); return;
+      }
+      data = d;
+      document.getElementById("s-total").textContent = d.total != null ? d.total : "-";
+      document.getElementById("s-active").textContent = d.active != null ? d.active : "-";
+      document.getElementById("s-exp").textContent = d.expired != null ? d.expired : "-";
+      render();
+    }
+
+    function render(){
+      if (!data) return;
+      var q = searchEl.value.trim().toUpperCase();
+      sections.innerHTML = "";
+      CATS.forEach(function(c){
+        var all = data.items.filter(function(it){ return (it.category === "free") === (c.id === "free"); });
+        var cnt = { total: all.length, active: 0, expired: 0 };
+        all.forEach(function(it){ if (it.active) cnt.active++; else cnt.expired++; });
+        var showType = c.id !== "free";
+        var rows = all.filter(function(it){
+          if (statusFilter === "active" && !it.active) return false;
+          if (statusFilter === "expired" && it.active) return false;
+          if (q && it.key.indexOf(q) === -1) return false;
+          return true;
+        });
+
+        var det = el("details","sec"); if (openState[c.id]) det.open = true;
+        det.addEventListener("toggle", function(){ openState[c.id] = det.open; });
+        var sum = el("summary");
+        sum.appendChild(el("span","caret"));
+        sum.appendChild(el("span","st", c.name));
+        sum.appendChild(el("span","sub", c.sub));
+        var pills = el("span","cnt");
+        pills.appendChild(el("span","pill ok", cnt.active + " active"));
+        pills.appendChild(el("span","pill bad", cnt.expired + " expired"));
+        pills.appendChild(el("span","pill", cnt.total + " total"));
+        sum.appendChild(pills);
+        det.appendChild(sum);
+
+        var wrap = el("div","tbl");
+        if (!rows.length){
+          wrap.appendChild(el("div","empty", all.length ? "No keys match this filter." : "No keys generated yet."));
+        } else {
+          var tb = el("table"), th = el("thead"), hr = el("tr");
+          (showType ? ["Key","Type","Status","Time left","Devices","Created"] : ["Key","Status","Time left","Devices","Created"])
+            .forEach(function(h){ hr.appendChild(el("th",null,h)); });
+          th.appendChild(hr); tb.appendChild(th);
+          var tbody = el("tbody");
+          rows.forEach(function(it){
+            var tr = el("tr");
+            var tk = el("td","key", it.key); tk.title = "Click to copy";
+            tk.onclick = function(){ navigator.clipboard.writeText(it.key).then(function(){ toast("Key copied","ok"); }); };
+            tr.appendChild(tk);
+            if (showType) tr.appendChild(el("td","typ", TYPE_NAMES[it.category] || "Custom"));
+            var ts = el("td"), life2 = it.active && it.ttl === -1;
+            ts.appendChild(el("span","badge " + (life2 ? "life" : it.active ? "act" : "exp"), life2 ? "Lifetime" : it.active ? "Active" : "Expired"));
+            tr.appendChild(ts);
+            tr.appendChild(el("td","mut", fmtLeft(it)));
+            tr.appendChild(el("td","mut", String(it.maxdev || 1)));
+            tr.appendChild(el("td","mut", fmtDate(it.at)));
+            tbody.appendChild(tr);
+          });
+          tb.appendChild(tbody); wrap.appendChild(tb);
+        }
+        det.appendChild(wrap);
+
+        var foot = el("div","secfoot");
+        var cp = el("button","b ghost sm","Copy active keys");
+        cp.onclick = function(){
+          var ks = all.filter(function(it){ return it.active; }).map(function(it){ return it.key; });
+          if (!ks.length){ toast("No active keys here","err"); return; }
+          navigator.clipboard.writeText(ks.join(NL)).then(function(){ toast(ks.length + " key(s) copied","ok"); });
+        };
+        var cpa = el("button","b ghost sm","Copy all keys");
+        cpa.onclick = function(){
+          var ks = all.map(function(it){ return it.key; });
+          if (!ks.length){ toast("No keys here","err"); return; }
+          navigator.clipboard.writeText(ks.join(NL)).then(function(){ toast(ks.length + " key(s) copied","ok"); });
+        };
+        foot.appendChild(cp); foot.appendChild(cpa);
+        det.appendChild(foot);
+        sections.appendChild(det);
       });
     }
-    async function loadKeys(){ try { renderKeys(await call("recent","{}")); } catch(e){} }
 
+    document.getElementById("seg").onclick = function(e){
+      var b = e.target.closest("button[data-s]"); if (!b) return;
+      statusFilter = b.dataset.s;
+      document.querySelectorAll("#seg button").forEach(function(x){ x.classList.toggle("on", x === b); });
+      render();
+    };
+    searchEl.oninput = render;
+
+    async function loadKeys(){ try { setData(await call("recent","{}")); } catch(e){} }
     function stopTimer(){ if (timer){ clearInterval(timer); timer = null; } }
     auto.onchange = function(){
-      if (auto.checked){ if(!v("secret")){ toast("Enter the admin secret first","err"); auto.checked=false; return; } loadKeys(); timer = setInterval(loadKeys, 5000); }
+      if (auto.checked){ if(!v("secret")){ toast("Enter the admin secret first","err"); auto.checked=false; return; } loadKeys(); timer = setInterval(loadKeys, 10000); }
       else stopTimer();
     };
 
     copyBtn.onclick = function(){
-      navigator.clipboard.writeText(lastKeys.join("\\n")).then(function(){ copyBtn.textContent = "Copied!"; toast("Keys copied","ok"); })
+      navigator.clipboard.writeText(lastKeys.join(NL)).then(function(){ copyBtn.textContent = "Copied"; toast("Keys copied","ok"); })
         .catch(function(){ copyBtn.textContent = "Copy failed"; });
     };
   })();
