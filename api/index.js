@@ -367,10 +367,11 @@ button.violet{background:linear-gradient(180deg,#3a3a42,#0e0e11)!important;color
 
 input{background:rgba(0,0,0,.6)!important;border-radius:10px!important;border:1px solid rgba(255,255,255,.14)!important}
 input:focus{border-color:#fff!important;box-shadow:0 0 0 3px rgba(255,255,255,.15),0 0 22px rgba(255,255,255,.2)!important}
-.key{background:rgba(0,0,0,.65)!important;border:1px solid rgba(255,255,255,.3)!important;border-radius:10px!important;
-  background-image:linear-gradient(90deg,#9a9da8,#fff,#9a9da8)!important;background-size:200% auto!important;
-  -webkit-background-clip:text;background-clip:text;color:transparent!important;text-shadow:none!important;
-  animation:titleShine 3s linear infinite,pulse 2.6s ease-in-out infinite!important}
+.key{background:linear-gradient(180deg,rgba(18,18,22,.95),rgba(4,4,6,.95))!important;border:1px solid rgba(255,255,255,.35)!important;
+  border-radius:10px!important;color:#fff!important;-webkit-text-fill-color:#fff!important;text-shadow:0 0 14px rgba(255,255,255,.45)!important;
+  animation:pulse 2.6s ease-in-out infinite!important;font-weight:600;position:relative;overflow:hidden}
+.key::after{content:"";position:absolute;top:0;bottom:0;left:0;width:30%;pointer-events:none;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.16),transparent);animation:sheen 3.4s ease-in-out infinite}
 pre{background:rgba(0,0,0,.65)!important;border:1px solid rgba(255,255,255,.14)!important;color:#e8e9ed!important}
 a{color:#eceef2}
 
@@ -452,7 +453,7 @@ const SHARED_JS = String.raw`
       var was = running; running = !document.hidden; if (running && !was) requestAnimationFrame(loop);
     });
     function loop(){
-      if (!running) return;
+      if (!running || !c.isConnected) return;
       x.clearRect(0, 0, W, H);
       for (var i = 0; i < P.length; i++) {
         var p = P[i]; p.t += .02; p.y -= p.vy; p.x += p.vx + Math.sin(p.t) * .3 * dpr;
@@ -466,7 +467,7 @@ const SHARED_JS = String.raw`
   }
 
   // ---- Button ripples ----
-  document.addEventListener("pointerdown", function(e){
+  document.addEventListener("pointerdown", window.__bcRipFn = window.__bcRipFn || function(e){
     var b = e.target.closest && e.target.closest("button,.btn");
     if (!b) return;
     var r = b.getBoundingClientRect(), s = document.createElement("span"), d = Math.max(r.width, r.height);
@@ -512,6 +513,7 @@ const SHARED_JS = String.raw`
   btn.setAttribute("aria-label", "Toggle music"); btn.setAttribute("aria-pressed", "false");
   btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg><span class="eq"><i></i><i></i><i></i><i></i></span><span class="slash"></span>';
   var holder = document.createElement("div");
+  holder.id = "musicpl";
   holder.style.cssText = "position:fixed;left:-9999px;top:0;width:200px;height:200px;overflow:hidden;pointer-events:none";
   function setUI(on){ btn.classList.toggle("on", on); btn.setAttribute("aria-pressed", on ? "true" : "false"); }
   function save(){ try { sessionStorage.setItem(K, want ? "1" : "0"); } catch (e) {} }
@@ -533,13 +535,19 @@ const SHARED_JS = String.raw`
       events: {
         onReady: function(){ ready = true; try { player.setVolume(60); } catch (e) {} if (want) player.playVideo(); },
         onAutoplayBlocked: function(){ want = false; setUI(false); save(); },
-        onStateChange: function(e){ if (e.data === 1 && want) setUI(true); }
+        onStateChange: function(e){
+          if (e.data === 1 && want) setUI(true);
+          if (e.data === 2 && want) setTimeout(function(){ try { if (want) player.playVideo(); } catch (x) {} }, 250);
+        }
       }
     });
   }
   btn.addEventListener("click", function(){
     want = !want; setUI(want); save();
     if (want) loadApi(make); else if (player && ready) player.pauseVideo();
+  });
+  document.addEventListener("visibilitychange", function(){
+    try { if (want && player && ready && player.getPlayerState() !== 1) player.playVideo(); } catch (e) {}
   });
   addEventListener("pagehide", function(){
     try { if (player && ready && want) sessionStorage.setItem(KT, String(Math.floor(player.getCurrentTime() || 0))); } catch (e) {}
@@ -556,6 +564,60 @@ const SHARED_JS = String.raw`
     }
   }
   if (document.body) mount(); else addEventListener("DOMContentLoaded", mount);
+})();
+
+// ---- In-site navigation without reloading, so the music keeps playing between pages ----
+(function(){
+  if (window.__bcNav) return; window.__bcNav = 1;
+  var OK = /^\/(games|scripts|executors|checker|reset)?\/?$/;
+  var busy = false;
+  function eligible(u){ return u.origin === location.origin && OK.test(u.pathname); }
+  function swap(doc){
+    document.title = doc.title;
+    var oldStyles = Array.prototype.slice.call(document.head.querySelectorAll("style"));
+    Array.prototype.slice.call(doc.head.querySelectorAll("style")).forEach(function(st){ document.head.appendChild(document.importNode(st, true)); });
+    oldStyles.forEach(function(st){ st.remove(); });
+    var btn = document.getElementById("musicbtn"), pl = document.getElementById("musicpl");
+    Array.prototype.slice.call(document.body.childNodes).forEach(function(n){ if (n !== btn && n !== pl) n.remove(); });
+    document.body.className = doc.body.className;
+    Array.prototype.slice.call(doc.body.childNodes).forEach(function(n){
+      if (n.id === "musicbtn" || n.id === "musicpl") return;
+      document.body.insertBefore(document.importNode(n, true), pl || btn || null);
+    });
+    Array.prototype.slice.call(document.body.querySelectorAll("script")).forEach(function(o){
+      var n = document.createElement("script");
+      Array.prototype.slice.call(o.attributes).forEach(function(a){ n.setAttribute(a.name, a.value); });
+      n.textContent = o.textContent;
+      o.parentNode.replaceChild(n, o);
+    });
+  }
+  function go(url, push){
+    if (busy) return; busy = true;
+    fetch(url, { credentials: "same-origin" }).then(function(r){
+      var ct = r.headers.get("content-type") || "";
+      if (!r.ok || ct.indexOf("text/html") < 0 || new URL(r.url).origin !== location.origin) throw 0;
+      return r.text().then(function(t){ return { html: t, url: r.url }; });
+    }).then(function(a){
+      var doc = new DOMParser().parseFromString(a.html, "text/html");
+      if (!doc.body) throw 0;
+      swap(doc);
+      if (push) history.pushState({ bc: 1 }, "", a.url);
+      window.scrollTo(0, 0);
+    }).catch(function(){ location.href = url; }).then(function(){ busy = false; });
+  }
+  document.addEventListener("click", function(e){
+    if (e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    if (!OK.test(location.pathname)) return;
+    var a = e.target.closest && e.target.closest("a[href]");
+    if (!a || (a.target && a.target !== "_self") || a.hasAttribute("download")) return;
+    var u; try { u = new URL(a.href, location.href); } catch (x) { return; }
+    if (!eligible(u)) return;
+    if (u.pathname === location.pathname && u.search === location.search) { if (u.hash) return; }
+    e.preventDefault(); go(u.href, true);
+  });
+  addEventListener("popstate", function(){
+    if (OK.test(location.pathname)) go(location.href, false); else location.reload();
+  });
 })();
 `;
 
@@ -1725,14 +1787,21 @@ function keyStillActivePage(key, ttl, total) {
     <h1>You Already Have a Key</h1>
     <p class="muted" style="margin:-2px 0 12px">One active key per user — you can't get another until this one expires.</p>
     ${ring(t, t, `${ICONS.check}<small>ACTIVE</small>`)}
+    <div class="key" id="k" data-key="${esc(key)}">${esc(key)}</div>
+    <button id="copy" class="go ready"><span>Copy Key</span></button>
     <div class="chip" style="margin-top:4px">Expires in <span id="exp" data-ttl="${ttl}">--</span></div>
     <p class="muted" style="margin-top:16px;font-size:.88rem">Your key is already active — use the one you've got.<br>Come back after it expires to get a new one.<br>
-    <a href="/">Home</a></p>
+    <a href="/checker?key=${esc(key)}">Check your key</a> · <a href="/">Home</a></p>
     <script>
       (function(){
         var exp=document.getElementById("exp"),left=+exp.dataset.ttl;
         function tick(){var h=Math.floor(left/3600),m=Math.floor(left%3600/60),s=left%60;exp.textContent=(h<10?"0":"")+h+":"+(m<10?"0":"")+m+":"+(s<10?"0":"")+s;if(left>0)left--;}
         tick();setInterval(tick,1000);
+        var kb=document.getElementById("copy"),kl=kb.querySelector("span"),kk=document.getElementById("k").dataset.key;
+        kb.onclick=async function(){
+          try{await navigator.clipboard.writeText(kk);kl.textContent="Copied!";if(window.burst)burst();}
+          catch(e){kl.textContent="Select & copy manually";}
+        };
       })();
     </script>`, { done: t, total: t, mode: "complete" });
 }
