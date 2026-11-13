@@ -76,7 +76,7 @@ local Config = {
     -- Round logo in the top-left of the key window (your eyes image).
     -- Loads your eye image from GitHub (LogoURL below).
     -- (Works on executors with getcustomasset, e.g. Delta.) Leave "" to turn off.
-    LogoURL = "https://raw.githubusercontent.com/FvckJiro/KeySystem/refs/heads/main/image/eye-logo.png",
+    LogoURL = "https://raw.githubusercontent.com/FvckJiro/KeySystem/refs/heads/main/image/6qeLKYAAAAGSURBVAMAv2cDw5erKM4AAAAASUVORK5CYII.png",
     -- OPTIONAL: a Roblox decal instead, e.g. "rbxassetid://1234567890" (used first if set).
     LogoImage = "",
 }
