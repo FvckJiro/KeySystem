@@ -92,16 +92,16 @@ local LocalPlayer    = Players.LocalPlayer
 
 --// Theme (matches the ObsessionHub website)
 local T = {
-    bg      = Color3.fromRGB(14, 6, 9),
-    panel   = Color3.fromRGB(22, 9, 13),
-    stroke  = Color3.fromRGB(60, 24, 32),
-    red     = Color3.fromRGB(224, 31, 58),
-    red2    = Color3.fromRGB(255, 59, 78),
-    violet  = Color3.fromRGB(139, 92, 246),
-    blue    = Color3.fromRGB(56, 140, 255),
-    cyan    = Color3.fromRGB(80, 220, 255),
+    bg      = Color3.fromRGB(14, 14, 14),
+    panel   = Color3.fromRGB(22, 22, 22),
+    stroke  = Color3.fromRGB(60, 60, 60),
+    red     = Color3.fromRGB(255, 255, 255),
+    red2    = Color3.fromRGB(255, 255, 255),
+    violet  = Color3.fromRGB(255, 255, 255),
+    blue    = Color3.fromRGB(255, 255, 255),
+    cyan    = Color3.fromRGB(255, 255, 255),
     text    = Color3.fromRGB(245, 234, 236),
-    muted   = Color3.fromRGB(150, 124, 131),
+    muted   = Color3.fromRGB(150, 150, 150),
     good    = Color3.fromRGB(110, 231, 164),
     bad     = Color3.fromRGB(255, 92, 92),
 }
@@ -335,7 +335,7 @@ o267743.AutomaticSize = Enum.AutomaticSize.None
 o267743.ZIndex = 1
 o267743.LayoutOrder = 0
 o267743.Image = "rbxassetid://6014261993"
-o267743.ImageColor3 = Color3.fromRGB(224, 31, 58) -- was ugly black -> red glow
+o267743.ImageColor3 = Color3.fromRGB(255, 255, 255) -- was ugly black -> red glow
 o267743.ImageTransparency = 0.35
 o267743.ImageRectOffset = Vector2.new(0, 0)
 o267743.ImageRectSize = Vector2.new(0, 0)
@@ -352,7 +352,7 @@ o740206.Name = "CanvasGroup"
 o740206.Size = UDim2.new(1, 0, 1, 0)
 o740206.Position = UDim2.new(0, 0, 0, 0)
 o740206.AnchorPoint = Vector2.new(0, 0)
-o740206.BackgroundColor3 = Color3.fromRGB(14, 6, 9)
+o740206.BackgroundColor3 = Color3.fromRGB(14, 14, 14)
 o740206.BackgroundTransparency = 0
 o740206.BorderColor3 = Color3.fromRGB(27, 42, 53)
 o740206.BorderSizePixel = 0
@@ -380,15 +380,15 @@ local oBorder = Instance.new("UIStroke")
 oBorder.Name = "ShinyBorder"
 oBorder.Thickness = 2
 oBorder.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-oBorder.Color = Color3.fromRGB(255, 70, 90)
+oBorder.Color = Color3.fromRGB(255, 255, 255)
 oBorder.Transparency = 0
 oBorder.Parent = o740206
 local oBorderGrad = Instance.new("UIGradient")
 oBorderGrad.Name = "Shine"
 oBorderGrad.Color = ColorSequence.new({
-  ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 190, 200)),
-  ColorSequenceKeypoint.new(0.5, Color3.fromRGB(224, 31, 58)),
-  ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 8, 20)),
+  ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+  ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
+  ColorSequenceKeypoint.new(1, Color3.fromRGB(120, 120, 120)),
 })
 oBorderGrad.Rotation = 0
 oBorderGrad.Parent = oBorder
@@ -418,7 +418,7 @@ o814341.AutomaticSize = Enum.AutomaticSize.None
 o814341.ZIndex = 1
 o814341.LayoutOrder = 0
 o814341.Image = "rbxassetid://8992230677"
-o814341.ImageColor3 = Color3.fromRGB(230, 170, 178)
+o814341.ImageColor3 = Color3.fromRGB(255, 255, 255)
 o814341.ImageTransparency = 0.8600000143051147
 o814341.ImageRectOffset = Vector2.new(0, 0)
 o814341.ImageRectSize = Vector2.new(0, 0)
@@ -435,7 +435,7 @@ o750338.Name = "UIGradient"
 o750338.Rotation = 270
 o750338.Enabled = true
 o750338.Offset = Vector2.new(0, 0)
-o750338.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(224, 31, 58))})
+o750338.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))})
 o750338.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0, 0), NumberSequenceKeypoint.new(1, 0, 0)})
 o750338.Parent = o814341
 local o755262 = Instance.new("ImageLabel")
@@ -458,7 +458,7 @@ o755262.AutomaticSize = Enum.AutomaticSize.None
 o755262.ZIndex = 1
 o755262.LayoutOrder = 0
 o755262.Image = "rbxassetid://8992230677"
-o755262.ImageColor3 = Color3.fromRGB(230, 170, 178)
+o755262.ImageColor3 = Color3.fromRGB(255, 255, 255)
 o755262.ImageTransparency = 0.75
 o755262.ImageRectOffset = Vector2.new(0, 0)
 o755262.ImageRectSize = Vector2.new(0, 0)
@@ -475,7 +475,7 @@ o703513.Name = "UIGradient"
 o703513.Rotation = 90
 o703513.Enabled = true
 o703513.Offset = Vector2.new(0, 0)
-o703513.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(224, 31, 58))})
+o703513.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))})
 o703513.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0, 0), NumberSequenceKeypoint.new(1, 0, 0)})
 o703513.Parent = o755262
 local o929500 = Instance.new("ImageLabel")
@@ -498,7 +498,7 @@ o929500.AutomaticSize = Enum.AutomaticSize.None
 o929500.ZIndex = 1
 o929500.LayoutOrder = 0
 o929500.Image = "rbxassetid://8992230677"
-o929500.ImageColor3 = Color3.fromRGB(230, 170, 178)
+o929500.ImageColor3 = Color3.fromRGB(255, 255, 255)
 o929500.ImageTransparency = 0.9200000166893005
 o929500.ImageRectOffset = Vector2.new(0, 0)
 o929500.ImageRectSize = Vector2.new(0, 0)
@@ -515,7 +515,7 @@ o421083.Name = "UIGradient"
 o421083.Rotation = 90
 o421083.Enabled = true
 o421083.Offset = Vector2.new(0, 0)
-o421083.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(224, 31, 58))})
+o421083.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))})
 o421083.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0, 0), NumberSequenceKeypoint.new(1, 0, 0)})
 o421083.Parent = o929500
 local o736954 = Instance.new("ImageLabel")
@@ -538,7 +538,7 @@ o736954.AutomaticSize = Enum.AutomaticSize.None
 o736954.ZIndex = 1
 o736954.LayoutOrder = 0
 o736954.Image = "rbxassetid://8992230677"
-o736954.ImageColor3 = Color3.fromRGB(230, 170, 178)
+o736954.ImageColor3 = Color3.fromRGB(255, 255, 255)
 o736954.ImageTransparency = 0.7799999713897705
 o736954.ImageRectOffset = Vector2.new(0, 0)
 o736954.ImageRectSize = Vector2.new(0, 0)
@@ -555,7 +555,7 @@ o808447.Name = "UIGradient"
 o808447.Rotation = 90
 o808447.Enabled = true
 o808447.Offset = Vector2.new(0, 0)
-o808447.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(224, 31, 58))})
+o808447.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))})
 o808447.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0, 0), NumberSequenceKeypoint.new(1, 0, 0)})
 o808447.Parent = o736954
 local o288475 = Instance.new("Frame")
@@ -617,7 +617,7 @@ logoCorner.CornerRadius = UDim.new(1, 0)
 logoCorner.Parent = o123988
 local logoGlow = Instance.new("UIStroke")
 logoGlow.Thickness = 1.5
-logoGlow.Color = Color3.fromRGB(224, 31, 58)
+logoGlow.Color = Color3.fromRGB(255, 255, 255)
 logoGlow.Transparency = 0.1
 logoGlow.Parent = o123988
 local o285654 = Instance.new("TextLabel")
@@ -739,7 +739,7 @@ o772932.Name = "Frame"
 o772932.Size = UDim2.new(0, 300, 0, 40)
 o772932.Position = UDim2.new(0, 28, 0, 120)
 o772932.AnchorPoint = Vector2.new(0, 0)
-o772932.BackgroundColor3 = Color3.fromRGB(26, 12, 16)
+o772932.BackgroundColor3 = Color3.fromRGB(26, 26, 26)
 o772932.BackgroundTransparency = 0
 o772932.BorderColor3 = Color3.fromRGB(27, 42, 53)
 o772932.BorderSizePixel = 0
@@ -771,7 +771,7 @@ o763833.ZIndex = 1
 o763833.Thickness = 1
 o763833.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
 o763833.LineJoinMode = Enum.LineJoinMode.Round
-o763833.Color = Color3.fromRGB(74, 26, 36)
+o763833.Color = Color3.fromRGB(74, 74, 74)
 o763833.Transparency = 0
 o763833.Parent = o772932
 local o169951 = Instance.new("Frame")
@@ -980,7 +980,7 @@ o749571.Name = "TextButton"
 o749571.Size = UDim2.new(0, 144, 0, 38)
 o749571.Position = UDim2.new(0, 28, 0, 176)
 o749571.AnchorPoint = Vector2.new(0, 0)
-o749571.BackgroundColor3 = Color3.fromRGB(224, 31, 58)
+o749571.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 o749571.BackgroundTransparency = 0.11999999731779099
 o749571.BorderColor3 = Color3.fromRGB(27, 42, 53)
 o749571.BorderSizePixel = 1
@@ -1001,7 +1001,7 @@ o749571.Text = "Submit"
 o749571.TextSize = 13
 o749571.TextScaled = false
 o749571.TextWrapped = false
-o749571.TextColor3 = Color3.fromRGB(26, 12, 16)
+o749571.TextColor3 = Color3.fromRGB(26, 26, 26)
 o749571.TextXAlignment = Enum.TextXAlignment.Center
 o749571.TextYAlignment = Enum.TextYAlignment.Center
 o749571.TextTransparency = 0
@@ -1026,13 +1026,13 @@ o719664.ZIndex = 1
 o719664.Thickness = 1
 o719664.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
 o719664.LineJoinMode = Enum.LineJoinMode.Round
-o719664.Color = Color3.fromRGB(224, 31, 58)
+o719664.Color = Color3.fromRGB(255, 255, 255)
 o719664.Transparency = 0.4000000059604645
 o719664.Parent = o749571
 local oShine = Instance.new("UIGradient")
 oShine.Name = "Shine"
 oShine.Rotation = 90
-oShine.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(0.45, Color3.fromRGB(255, 120, 135)), ColorSequenceKeypoint.new(1, Color3.fromRGB(176, 16, 36))})
+oShine.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(0.45, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(176, 176, 176))})
 oShine.Parent = o749571
 local o613340 = Instance.new("UIPadding")
 o613340.Name = "UIPadding"
@@ -1083,7 +1083,7 @@ o664696.AutomaticSize = Enum.AutomaticSize.None
 o664696.ZIndex = 0
 o664696.LayoutOrder = 0
 o664696.Image = "rbxassetid://8992230677"
-o664696.ImageColor3 = Color3.fromRGB(26, 12, 16)
+o664696.ImageColor3 = Color3.fromRGB(26, 26, 26)
 o664696.ImageTransparency = 0.8999999761581421
 o664696.ImageRectOffset = Vector2.new(0, 0)
 o664696.ImageRectSize = Vector2.new(0, 0)
@@ -1115,7 +1115,7 @@ o923873.AutomaticSize = Enum.AutomaticSize.None
 o923873.ZIndex = 1
 o923873.LayoutOrder = 0
 o923873.Image = "rbxassetid://122605056588923"
-o923873.ImageColor3 = Color3.fromRGB(26, 12, 16)
+o923873.ImageColor3 = Color3.fromRGB(26, 26, 26)
 o923873.ImageTransparency = 0
 o923873.ImageRectOffset = Vector2.new(200, 100)
 o923873.ImageRectSize = Vector2.new(24, 24)
@@ -1132,7 +1132,7 @@ o354461.Name = "TextButton"
 o354461.Size = UDim2.new(0, 144, 0, 38)
 o354461.Position = UDim2.new(0, 184, 0, 176)
 o354461.AnchorPoint = Vector2.new(0, 0)
-o354461.BackgroundColor3 = Color3.fromRGB(46, 20, 26)
+o354461.BackgroundColor3 = Color3.fromRGB(46, 46, 46)
 o354461.BackgroundTransparency = 0
 o354461.BorderColor3 = Color3.fromRGB(27, 42, 53)
 o354461.BorderSizePixel = 1
@@ -1183,7 +1183,7 @@ o659513.ZIndex = 1
 o659513.Thickness = 1
 o659513.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
 o659513.LineJoinMode = Enum.LineJoinMode.Round
-o659513.Color = Color3.fromRGB(74, 26, 36)
+o659513.Color = Color3.fromRGB(74, 74, 74)
 o659513.Transparency = 0
 o659513.Parent = o354461
 local o551392 = Instance.new("UIPadding")
@@ -1284,7 +1284,7 @@ o997456.Name = "Frame"
 o997456.Size = UDim2.new(0, 1, 1, -56)
 o997456.Position = UDim2.new(0, 356, 0, 28)
 o997456.AnchorPoint = Vector2.new(0, 0)
-o997456.BackgroundColor3 = Color3.fromRGB(74, 26, 36)
+o997456.BackgroundColor3 = Color3.fromRGB(74, 74, 74)
 o997456.BackgroundTransparency = 0
 o997456.BorderColor3 = Color3.fromRGB(27, 42, 53)
 o997456.BorderSizePixel = 0
@@ -1366,7 +1366,7 @@ o185506.Name = "Frame"
 o185506.Size = UDim2.new(0, 188, 0, 60)
 o185506.Position = UDim2.new(0, 28, 0, 50)
 o185506.AnchorPoint = Vector2.new(0, 0)
-o185506.BackgroundColor3 = Color3.fromRGB(30, 14, 18)
+o185506.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 o185506.BackgroundTransparency = 0
 o185506.BorderColor3 = Color3.fromRGB(27, 42, 53)
 o185506.BorderSizePixel = 0
@@ -1398,7 +1398,7 @@ o632236.ZIndex = 1
 o632236.Thickness = 1
 o632236.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
 o632236.LineJoinMode = Enum.LineJoinMode.Round
-o632236.Color = Color3.fromRGB(74, 26, 36)
+o632236.Color = Color3.fromRGB(74, 74, 74)
 o632236.Transparency = 0
 o632236.Parent = o185506
 local o948994 = Instance.new("ImageLabel")
@@ -1406,7 +1406,7 @@ o948994.Name = "ImageLabel"
 o948994.Size = UDim2.new(0, 38, 0, 38)
 o948994.Position = UDim2.new(0, 11, 0, 11)
 o948994.AnchorPoint = Vector2.new(0, 0)
-o948994.BackgroundColor3 = Color3.fromRGB(26, 12, 16)
+o948994.BackgroundColor3 = Color3.fromRGB(26, 26, 26)
 o948994.BackgroundTransparency = 0
 o948994.BorderColor3 = Color3.fromRGB(27, 42, 53)
 o948994.BorderSizePixel = 0
@@ -1448,7 +1448,7 @@ o583099.ZIndex = 1
 o583099.Thickness = 1
 o583099.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
 o583099.LineJoinMode = Enum.LineJoinMode.Round
-o583099.Color = Color3.fromRGB(74, 26, 36)
+o583099.Color = Color3.fromRGB(74, 74, 74)
 o583099.Transparency = 0
 o583099.Parent = o948994
 local o860169 = Instance.new("TextLabel")
@@ -1664,7 +1664,7 @@ o576053.Text = "Key required"
 o576053.TextSize = 11
 o576053.TextScaled = false
 o576053.TextWrapped = false
-o576053.TextColor3 = Color3.fromRGB(255, 70, 86)
+o576053.TextColor3 = Color3.fromRGB(255, 255, 255)
 o576053.TextXAlignment = Enum.TextXAlignment.Right
 o576053.TextYAlignment = Enum.TextYAlignment.Center
 o576053.TextTransparency = 0
@@ -1684,7 +1684,7 @@ o365821.Name = "Frame"
 o365821.Size = UDim2.new(0, 188, 0, 1)
 o365821.Position = UDim2.new(0, 28, 0, 176)
 o365821.AnchorPoint = Vector2.new(0, 0)
-o365821.BackgroundColor3 = Color3.fromRGB(74, 26, 36)
+o365821.BackgroundColor3 = Color3.fromRGB(74, 74, 74)
 o365821.BackgroundTransparency = 0
 o365821.BorderColor3 = Color3.fromRGB(27, 42, 53)
 o365821.BorderSizePixel = 0
@@ -1706,7 +1706,7 @@ o138397.Name = "TextButton"
 o138397.Size = UDim2.new(0, 188, 0, 48)
 o138397.Position = UDim2.new(0, 28, 0, 190)
 o138397.AnchorPoint = Vector2.new(0, 0)
-o138397.BackgroundColor3 = Color3.fromRGB(30, 14, 18)
+o138397.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 o138397.BackgroundTransparency = 0
 o138397.BorderColor3 = Color3.fromRGB(27, 42, 53)
 o138397.BorderSizePixel = 1
@@ -1758,7 +1758,7 @@ o630141.ZIndex = 1
 o630141.Thickness = 1
 o630141.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
 o630141.LineJoinMode = Enum.LineJoinMode.Round
-o630141.Color = Color3.fromRGB(74, 26, 36)
+o630141.Color = Color3.fromRGB(74, 74, 74)
 o630141.Transparency = 0
 o630141.Parent = o138397
 local o179911 = Instance.new("Frame")
@@ -1803,7 +1803,7 @@ o474802.AutomaticSize = Enum.AutomaticSize.None
 o474802.ZIndex = 0
 o474802.LayoutOrder = 0
 o474802.Image = "rbxassetid://8992230677"
-o474802.ImageColor3 = Color3.fromRGB(224, 31, 58)
+o474802.ImageColor3 = Color3.fromRGB(255, 255, 255)
 o474802.ImageTransparency = 0.8999999761581421
 o474802.ImageRectOffset = Vector2.new(0, 0)
 o474802.ImageRectSize = Vector2.new(0, 0)
@@ -1835,7 +1835,7 @@ o563038.AutomaticSize = Enum.AutomaticSize.None
 o563038.ZIndex = 1
 o563038.LayoutOrder = 0
 o563038.Image = "rbxassetid://122605056588923"
-o563038.ImageColor3 = Color3.fromRGB(224, 31, 58)
+o563038.ImageColor3 = Color3.fromRGB(255, 255, 255)
 o563038.ImageTransparency = 0
 o563038.ImageRectOffset = Vector2.new(325, 775)
 o563038.ImageRectSize = Vector2.new(24, 24)
@@ -1904,7 +1904,7 @@ o120197.Interactable = true
 o120197.AutomaticSize = Enum.AutomaticSize.None
 o120197.ZIndex = 1
 o120197.LayoutOrder = 0
-o120197.Text = "dsc.gg/obsessionhub"
+o120197.Text = "dsc.gg/blackcloverhub"
 o120197.TextSize = 11
 o120197.TextScaled = false
 o120197.TextWrapped = false
@@ -1928,7 +1928,7 @@ o427664.Name = "TextButton"
 o427664.Size = UDim2.new(0, 188, 0, 48)
 o427664.Position = UDim2.new(0, 28, 0, 246)
 o427664.AnchorPoint = Vector2.new(0, 0)
-o427664.BackgroundColor3 = Color3.fromRGB(30, 14, 18)
+o427664.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 o427664.BackgroundTransparency = 0
 o427664.BorderColor3 = Color3.fromRGB(27, 42, 53)
 o427664.BorderSizePixel = 1
@@ -1980,7 +1980,7 @@ o877148.ZIndex = 1
 o877148.Thickness = 1
 o877148.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
 o877148.LineJoinMode = Enum.LineJoinMode.Round
-o877148.Color = Color3.fromRGB(74, 26, 36)
+o877148.Color = Color3.fromRGB(74, 74, 74)
 o877148.Transparency = 0
 o877148.Parent = o427664
 local o781418 = Instance.new("Frame")
@@ -2025,7 +2025,7 @@ o812220.AutomaticSize = Enum.AutomaticSize.None
 o812220.ZIndex = 0
 o812220.LayoutOrder = 0
 o812220.Image = "rbxassetid://8992230677"
-o812220.ImageColor3 = Color3.fromRGB(224, 31, 58)
+o812220.ImageColor3 = Color3.fromRGB(255, 255, 255)
 o812220.ImageTransparency = 0.8999999761581421
 o812220.ImageRectOffset = Vector2.new(0, 0)
 o812220.ImageRectSize = Vector2.new(0, 0)
@@ -2057,7 +2057,7 @@ o714051.AutomaticSize = Enum.AutomaticSize.None
 o714051.ZIndex = 1
 o714051.LayoutOrder = 0
 o714051.Image = "rbxassetid://122605056588923"
-o714051.ImageColor3 = Color3.fromRGB(224, 31, 58)
+o714051.ImageColor3 = Color3.fromRGB(255, 255, 255)
 o714051.ImageTransparency = 0
 o714051.ImageRectOffset = Vector2.new(450, 500)
 o714051.ImageRectSize = Vector2.new(24, 24)
@@ -2126,7 +2126,7 @@ o354099.Interactable = true
 o354099.AutomaticSize = Enum.AutomaticSize.None
 o354099.ZIndex = 1
 o354099.LayoutOrder = 0
-o354099.Text = "obsessionhub.vercel.app"
+o354099.Text = "blackcloverhub.vercel.app"
 o354099.TextSize = 11
 o354099.TextScaled = false
 o354099.TextWrapped = false
@@ -2165,7 +2165,7 @@ local card        = o740206   -- the card
 
 local GOOD = Color3.fromRGB(110, 231, 164)
 local BAD  = Color3.fromRGB(255, 92, 106)
-local MUTE = Color3.fromRGB(150, 124, 131)
+local MUTE = Color3.fromRGB(150, 150, 150)
 
 local function say(txt, col) msgLabel.Text = txt or ""; msgLabel.TextColor3 = col or MUTE end
 local function setStatus(txt, col) statusLbl.Text = txt; statusLbl.TextColor3 = col or BAD end
@@ -2231,6 +2231,48 @@ if not detected then setStatus("Game not supported", BAD)
 elseif detected.requiresKey then setStatus("Key required", BAD)
 else setStatus("Free - no key", GOOD) end
 
+-- Buy Premium: centered under Submit / Get a key
+do
+    local leftPanel = submitBtn.Parent
+    local buy = Instance.new("TextButton")
+    buy.Name = "BuyPremium"
+    buy.Size = UDim2.new(0, 300, 0, 32)
+    buy.Position = UDim2.new(0, 28, 0, 256)
+    buy.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
+    buy.AutoButtonColor = false
+    buy.Text = "Buy Premium"
+    buy.TextSize = 13
+    buy.TextColor3 = Color3.fromRGB(255, 255, 255)
+    buy.TextXAlignment = Enum.TextXAlignment.Center
+    buy.TextYAlignment = Enum.TextYAlignment.Center
+    buy.TextWrapped = false
+    pcall(function() buy.TextTruncate = Enum.TextTruncate.AtEnd end)
+    buy.FontFace = Font.new("rbxassetid://12187365364", Enum.FontWeight.Medium, Enum.FontStyle.Normal)
+    buy.ZIndex = 2
+    buy.Visible = (Config.Premium ~= nil and Config.Premium ~= "")
+    local bc = Instance.new("UICorner", buy); bc.CornerRadius = UDim.new(0, 8)
+    local bs = Instance.new("UIStroke", buy)
+    bs.Color = Color3.fromRGB(255, 255, 255); bs.Thickness = 1; bs.Transparency = 0.2
+    bs.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    local bg = Instance.new("UIGradient", buy)
+    bg.Rotation = 90
+    bg.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(215, 215, 215)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(150, 150, 150)),
+    })
+    buy.Parent = leftPanel
+    buy.MouseButton1Click:Connect(function()
+        setClip(Config.Premium)
+        notify("ObsessionHub", "Premium link copied!", 3)
+    end)
+end
+
+-- Keep every label on one line so nothing runs into its neighbor
+for _, b in ipairs({ submitBtn, getKeyBtn, msgLabel }) do
+    pcall(function() b.TextWrapped = false; b.TextTruncate = Enum.TextTruncate.AtEnd end)
+end
+
 -- Social chips: copy the link
 discordBtn.MouseButton1Click:Connect(function()
     if Config.Discord ~= "" then setClip(Config.Discord); notify("ObsessionHub", "Discord link copied!", 3) end
@@ -2256,16 +2298,16 @@ do
     x.Name = "Close"
     x.Size = UDim2.new(0, 26, 0, 26)
     x.Position = UDim2.new(1, -36, 0, 10)
-    x.BackgroundColor3 = Color3.fromRGB(30, 14, 18)
+    x.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     x.BackgroundTransparency = 0.2
     x.Text = "X"
     x.Font = Enum.Font.GothamBold
     x.TextSize = 12
-    x.TextColor3 = Color3.fromRGB(233, 195, 202)
+    x.TextColor3 = Color3.fromRGB(255, 255, 255)
     x.AutoButtonColor = true
     x.ZIndex = 50
     local c = Instance.new("UICorner", x); c.CornerRadius = UDim.new(0, 7)
-    local s = Instance.new("UIStroke", x); s.Color = Color3.fromRGB(74, 26, 36); s.Thickness = 1
+    local s = Instance.new("UIStroke", x); s.Color = Color3.fromRGB(74, 74, 74); s.Thickness = 1
     x.Parent = card
     x.MouseButton1Click:Connect(function() root:Destroy() end)
 end
