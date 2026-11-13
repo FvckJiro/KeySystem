@@ -27,7 +27,7 @@ local Config = {
     ScriptBase = "https://raw.githubusercontent.com/LazyJiroHub/KeySystem/refs/heads/main/src/",
     Discord   = "https://discord.gg/D8SM7VfTKZ",      -- "" to hide the button
     Youtube   = "https://www.youtube.com/@jirombv",    -- "" to hide the button
-    Premium   = "https://discord.gg/D8SM7VfTKZ",      -- Buy Premium link ("" to hide)
+    Premium   = "https://dsc.gg/blackcloverhub",      -- Buy Premium link ("" to hide)
 
     RememberKey = true,   -- save the key on this device so users don't retype it
     CloseAfterLoad = true, -- close the window after a script loads
@@ -200,12 +200,12 @@ local function loadScript(entry)
     local src
     local ok = pcall(function() src = game:HttpGet(scriptUrl(entry), true) end)
     if not ok or not src or #src < 1 then
-        notify("ObsessionHub", "Couldn't download: " .. entry.name, 5)
+        notify("BlackCloverHub", "Couldn't download: " .. entry.name, 5)
         return false
     end
     local fn, err = loadstring(src, "=" .. entry.name)
     if not fn then
-        notify("ObsessionHub", "Script error: " .. tostring(err), 6)
+        notify("BlackCloverHub", "Script error: " .. tostring(err), 6)
         return false
     end
     task.spawn(fn)
@@ -227,7 +227,7 @@ local function startKeyWatch(key)
             if not ok and reason ~= "Can't reach the server" and reason ~= "Bad server response"
                 and reason ~= "Server error" and not tostring(reason):find("Server error") then
                 pcall(function()
-                    LocalPlayer:Kick("\n[ObsessionHub]\nYour key expired or is no longer valid.\nGet a new key to keep playing.")
+                    LocalPlayer:Kick("\n[BlackCloverHub]\nYour key expired or is no longer valid.\nGet a new key to keep playing.")
                 end)
                 break
             end
@@ -260,7 +260,7 @@ do
     local detected = detectScript()
     if detected then
         if not detected.requiresKey then
-            notify("ObsessionHub", "Loading " .. detected.name .. "...", 4)
+            notify("BlackCloverHub", "Loading " .. detected.name .. "...", 4)
             loadScript(detected)
             return
         end
@@ -268,7 +268,7 @@ do
         if saved and saved ~= "" then
             local ok = verifyKey(saved)
             if ok then
-                notify("ObsessionHub", "Key verified — loading " .. detected.name, 4)
+                notify("BlackCloverHub", "Key verified — loading " .. detected.name, 4)
                 if loadScript(detected) then startKeyWatch(saved) end
                 return
             end
@@ -639,7 +639,7 @@ o285654.Interactable = true
 o285654.AutomaticSize = Enum.AutomaticSize.None
 o285654.ZIndex = 1
 o285654.LayoutOrder = 0
-o285654.Text = "ObsessionHub"
+o285654.Text = "BlackCloverHub"
 o285654.TextSize = 22
 o285654.TextScaled = false
 o285654.TextWrapped = false
@@ -2262,9 +2262,37 @@ do
         ColorSequenceKeypoint.new(1, Color3.fromRGB(150, 150, 150)),
     })
     buy.Parent = leftPanel
+    local toast
+    local toastTick = 0
     buy.MouseButton1Click:Connect(function()
         setClip(Config.Premium)
-        notify("ObsessionHub", "Premium link copied!", 3)
+        toastTick = toastTick + 1
+        local mine = toastTick
+        if toast then toast:Destroy() end
+        toast = Instance.new("Frame")
+        toast.Name = "PremiumToast"
+        toast.AnchorPoint = Vector2.new(1, 1)
+        toast.Position = UDim2.new(1, -16, 1, -16)
+        toast.Size = UDim2.new(0, 230, 0, 46)
+        toast.BackgroundColor3 = Color3.fromRGB(14, 14, 14)
+        toast.ZIndex = 100
+        local tc = Instance.new("UICorner", toast); tc.CornerRadius = UDim.new(0, 10)
+        local ts = Instance.new("UIStroke", toast)
+        ts.Color = Color3.fromRGB(255, 255, 255); ts.Thickness = 1; ts.Transparency = 0.2
+        local tt = Instance.new("TextLabel", toast)
+        tt.BackgroundTransparency = 1
+        tt.Size = UDim2.new(1, -24, 1, 0)
+        tt.Position = UDim2.new(0, 12, 0, 0)
+        tt.Text = "Premium link copied!"
+        tt.TextSize = 13
+        tt.TextColor3 = Color3.fromRGB(255, 255, 255)
+        tt.TextXAlignment = Enum.TextXAlignment.Left
+        tt.FontFace = Font.new("rbxassetid://12187365364", Enum.FontWeight.Medium, Enum.FontStyle.Normal)
+        tt.ZIndex = 101
+        toast.Parent = root
+        task.delay(2.5, function()
+            if toastTick == mine and toast then toast:Destroy(); toast = nil end
+        end)
     end)
 end
 
@@ -2275,17 +2303,17 @@ end
 
 -- Social chips: copy the link
 discordBtn.MouseButton1Click:Connect(function()
-    if Config.Discord ~= "" then setClip(Config.Discord); notify("ObsessionHub", "Discord link copied!", 3) end
+    if Config.Discord ~= "" then setClip(Config.Discord); notify("BlackCloverHub", "Discord link copied!", 3) end
 end)
 websiteBtn.MouseButton1Click:Connect(function()
-    setClip(Config.Website); notify("ObsessionHub", "Website link copied!", 3)
+    setClip(Config.Website); notify("BlackCloverHub", "Website link copied!", 3)
 end)
 
 -- Get a key: copy the key site link
 getKeyBtn.MouseButton1Click:Connect(function()
     setClip(Config.GetKeyURL)
     say("Key link copied - paste it in your browser", GOOD)
-    notify("ObsessionHub", "Get Key link copied to clipboard!", 4)
+    notify("BlackCloverHub", "Get Key link copied to clipboard!", 4)
 end)
 
 -- Prefill a saved key
