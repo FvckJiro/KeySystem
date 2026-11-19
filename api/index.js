@@ -103,6 +103,7 @@ const GAMES = [
   "Project Delta",
   "Steal An Egg",
   "Ride A Pet",
+  "Glory Bound",
   "Strafe FPS",
   "Tap Simulator",
   "Roll A StickMan",
