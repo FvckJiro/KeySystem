@@ -58,6 +58,7 @@ local Config = {
         { name = "RAP",  file = "RAP.lua",  requiresKey = false, placeIds = { 124216119978534, 10035204815 } },
         { name = "DF",   file = "DF.lua",   requiresKey = false, placeIds = { 132239307080610, 10526853622 } },
         { name = "GF",   file = "GF.lua",   requiresKey = false, placeIds = { 75687962646869, 10766957927 } },
+        { name = "GB",   file = "GB.lua",   requiresKey = false, placeIds = { 137629355240872, 10768652372 } },
         { name = "VS",   file = "VS.lua",   requiresKey = true,  placeIds = { 100283815455755, 9224753153 } },
         { name = "PD",   file = "PD.lua",   requiresKey = true,  placeIds = { 7336302630, 2862098693 } },
         { name = "LTF",  file = "LTF.lua",  requiresKey = true,  placeIds = { 118805555015549, 10684750879 } },
