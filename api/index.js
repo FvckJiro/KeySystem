@@ -94,6 +94,7 @@ const YOUTUBE_URL = "https://www.youtube.com/@jirombv";
 
 const GAMES = [
   "Anime Dice",
+  "Steal A Pc",
   "Death Ball",
   "Indo Voice",
   "Animal Hospital",
