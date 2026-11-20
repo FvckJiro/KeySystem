@@ -54,6 +54,7 @@ local Config = {
         { name = "KAU",  file = "KAU.lua",  requiresKey = false, placeIds = { 74968636725538, 10759415852 } },
         { name = "SAPP",  file = "SAPP.lua",  requiresKey = false, placeIds = { 135402322419238, 10769563057 } },
         { name = "DG",   file = "DG.lua",   requiresKey = false, placeIds = { 94217045453265, 9051406594 } },
+        { name = "MM2",   file = "MM2.lua",   requiresKey = false, placeIds = { 142823291, 66654135 } },
         { name = "SAE",  file = "SAE.lua",  requiresKey = false, placeIds = { 107778070777162, 10563114921 } },
         { name = "SF",   file = "SF.lua",   requiresKey = false, placeIds = { 109020905733214, 9187332740 } },
         { name = "RAP",  file = "RAP.lua",  requiresKey = false, placeIds = { 124216119978534, 10035204815 } },
