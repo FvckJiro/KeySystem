@@ -97,6 +97,7 @@ const GAMES = [
   "Steal A Pc",
   "Death Ball",
   "Indo Voice",
+  "Murder Mystery 2",
   "Animal Hospital",
   "Break And Steal An Egg",
   "Deep Fishing",
