@@ -47,7 +47,7 @@ local Config = {
     -- "file" = the script's file name inside your src/ folder (added onto ScriptBase above).
     -- placeIds = { <Place ID>, <Universe ID> } -- the loader matches either one.
     Scripts = {
-        { name = "TS",   file = "TSR.lua",  requiresKey = true,  placeIds = { 72858262610964, 10629695169 } },
+        { name = "TS",   file = "TSR.lua",  requiresKey = false,  placeIds = { 72858262610964, 10629695169 } },
         { name = "DB",   file = "DB.lua",   requiresKey = false, placeIds = { 15002061926, 5166944221 } },
         { name = "BASE", file = "BASE.lua", requiresKey = false, placeIds = { 114326934417838, 10765288803 } },
         { name = "AD",   file = "AD.lua",   requiresKey = false, placeIds = { 113290951185459, 10708913337 } },
@@ -61,13 +61,13 @@ local Config = {
         { name = "DF",   file = "DF.lua",   requiresKey = false, placeIds = { 132239307080610, 10526853622 } },
         { name = "GF",   file = "GF.lua",   requiresKey = false, placeIds = { 75687962646869, 10766957927 } },
         { name = "GB",   file = "GB.lua",   requiresKey = false, placeIds = { 137629355240872, 10768652372 } },
-        { name = "VS",   file = "VS.lua",   requiresKey = true,  placeIds = { 100283815455755, 9224753153 } },
-        { name = "PD",   file = "PD.lua",   requiresKey = true,  placeIds = { 7336302630, 2862098693 } },
-        { name = "LTF",  file = "LTF.lua",  requiresKey = true,  placeIds = { 118805555015549, 10684750879 } },
-        { name = "AH",   file = "AH.lua",   requiresKey = true,  placeIds = { 10148749921, 78515283254292 } },
-        { name = "BFE",  file = "BFE.lua",  requiresKey = true,  placeIds = { 74023858073178, 10766620257 } },
-        { name = "IV",   file = "IV.lua",   requiresKey = true,  placeIds = { 8356562067 } },
-        { name = "RASM",   file = "RASM.lua",   requiresKey = true,  placeIds = { 115068315659966, 10765938934 } },
+        { name = "VS",   file = "VS.lua",   requiresKey = false,  placeIds = { 100283815455755, 9224753153 } },
+        { name = "PD",   file = "PD.lua",   requiresKey = false,  placeIds = { 7336302630, 2862098693 } },
+        { name = "LTF",  file = "LTF.lua",  requiresKey = false,  placeIds = { 118805555015549, 10684750879 } },
+        { name = "AH",   file = "AH.lua",   requiresKey = false,  placeIds = { 10148749921, 78515283254292 } },
+        { name = "BFE",  file = "BFE.lua",  requiresKey = false,  placeIds = { 74023858073178, 10766620257 } },
+        { name = "IV",   file = "IV.lua",   requiresKey = false,  placeIds = { 8356562067 } },
+        { name = "RASM",   file = "RASM.lua",   requiresKey = false,  placeIds = { 115068315659966, 10765938934 } },
         { name = "TFFA", file = "TFFA.lua", requiresKey = false, placeIds = { 120219252362013 } }
     },
 
